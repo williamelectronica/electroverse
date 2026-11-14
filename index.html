@@ -674,6 +674,58 @@ textarea.input.pb-code { height: 260px; min-height: 160px; }
 :root[data-luz="noche"] #board .part .seg.on, :root[data-luz="noche"] #board .part .probe-led.on { filter: drop-shadow(0 0 9px currentColor) drop-shadow(0 0 4px #fff8); }
 @media (max-width: 720px) { .lab-studio #board { min-width: 620px; height: auto; } .lab-studio .board-wrap { place-items: start; } .lab-studio .lib { left: 50px; top: 50px; width: calc(100vw - 100px); max-height: 62%; } }
 
+/* ---------- v13 · Biblioteca de componentes (datos en data/componentes.js) ---------- */
+.bib { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.bib-lista { display: flex; flex-direction: column; gap: 10px; padding: 12px; position: sticky; top: 12px; max-height: calc(100vh - 110px); }
+.bib-cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.bib-items { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; padding-right: 2px; }
+.bib-item { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--glass-2); color: var(--fg); cursor: pointer; font: inherit; }
+.bib-item:hover { border-color: var(--line-2); }
+.bib-item[aria-current="true"] { border-color: var(--cyan); box-shadow: var(--glow-c); }
+.bib-item b { font-size: .88rem; line-height: 1.25; }
+.bib-item span { font-size: .74rem; color: var(--muted); }
+.bib-ficha { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.bib-ficha .panel-b > h2 { font-size: 1.45rem; }
+.bib-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.bib-tabla { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.bib-tabla th { text-align: left; font: 600 .7rem var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line-2); }
+.bib-tabla td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.bib-tabla td:first-child { font-family: var(--f-mono); font-weight: 600; white-space: nowrap; }
+.bib-tipo { display: inline-block; padding: 1px 8px; border-radius: 999px; font: 700 .7rem var(--f-mono); color: #fff; background: var(--c); white-space: nowrap; }
+.bib-pins { display: flex; flex-wrap: wrap; gap: 4px; }
+.bib-pin { font: 700 .72rem var(--f-mono); padding: 3px 7px; border-radius: 6px; color: #fff; background: var(--c); white-space: nowrap; }
+.bib-lados { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.bib-lados .bib-pins { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; }
+.bib-leyenda { display: flex; flex-wrap: wrap; gap: 10px; font-size: .74rem; color: var(--muted); }
+.bib-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); margin-right: 4px; vertical-align: -1px; }
+.bib-tabla.ancha { min-width: 520px; }
+.bib-dip { width: 100%; max-width: 480px; height: auto; display: block; margin: 0 auto; }
+.bib-dip .cuerpo { fill: #1c1d21; stroke: #000; }
+.bib-dip .pata { fill: #b9bdc5; }
+.bib-dip .num { font: 700 11px var(--f-mono); fill: #d9dee8; }
+.bib-dip .nom { font: 700 12px var(--f-mono); fill: var(--fg); }
+.bib-dip .compuerta { fill: color-mix(in srgb, var(--cyan) 14%, #1c1d21); stroke: var(--cyan); stroke-width: 1.4; }
+.bib-dip .ctxt { font: 700 10px var(--f-mono); fill: var(--cyan); }
+.bib-dip .cable { stroke: var(--cyan); stroke-width: 1.6; fill: none; }
+.bib-dip .vcc { fill: #e53935; } .bib-dip .gnd { fill: #5f6673; }
+.bib-dip .cable.sal { stroke: var(--lime); stroke-width: 2.2; }
+.bib-dip .bloque { fill: color-mix(in srgb, var(--violet) 14%, #1c1d21); stroke: var(--violet); stroke-width: 1.4; }
+.bib-dip .btxt { font: 700 12px var(--f-mono); fill: var(--violet); }
+.bib-code { position: relative; }
+.bib-code pre { margin: 0; padding: 12px; max-height: 460px; overflow: auto; font: 12.8px/1.5 var(--f-mono); background: color-mix(in srgb, var(--bg) 80%, transparent); border: 1px solid var(--line); border-radius: 10px; tab-size: 2; }
+.bib-avisos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.bib-avisos.warn li::marker { color: var(--warn); }
+.bib-verif { border: 1px dashed var(--warn); border-radius: 12px; padding: 10px 14px; color: var(--fg); background: color-mix(in srgb, var(--warn) 8%, transparent); }
+.bib-volver { display: none; }
+@media (max-width: 900px) {
+  .bib { grid-template-columns: minmax(0, 1fr); }
+  .bib-lista { position: static; max-height: none; }
+  .bib.con-ficha .bib-lista { display: none; }
+  .bib:not(.con-ficha) .bib-ficha { display: none; }
+  .bib-volver { display: inline-flex; }
+}
+@media print { .bib-lista, .rail, .topbar, .bib-acciones { display: none !important; } }
+
 </style>
 <div id="app" class="app"></div>
 <div id="gate" class="gate"></div>
@@ -1097,6 +1149,8 @@ onmessage = async (ev) => {
 };
 
 </script>
+<!-- v13: biblioteca de componentes (archivo de datos único) -->
+<script src="data/componentes.js"></script>
 <script>
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
 (function (root) {
@@ -2644,7 +2698,8 @@ const ICONS = {
   send: '<path d="M3 12l18-9-6 18-3-7z"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
   plus: '<path d="M12 5v14M5 12h14"/>', check: '<path d="M4 12l5 5L20 6"/>', logout: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
-  spark: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', board: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 12h20"/><path d="M5 8.5h.01M8 8.5h.01M11 8.5h.01M14 8.5h.01M17 8.5h.01M5 15.5h.01M8 15.5h.01M11 15.5h.01M14 15.5h.01M17 15.5h.01"/>', scope: '<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M6 13c2-6 4-6 6 0s4 6 6 0M8 21h8"/>'
+  spark: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', board: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 12h20"/><path d="M5 8.5h.01M8 8.5h.01M11 8.5h.01M14 8.5h.01M17 8.5h.01M5 15.5h.01M8 15.5h.01M11 15.5h.01M14 15.5h.01M17 15.5h.01"/>', scope: '<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M6 13c2-6 4-6 6 0s4 6 6 0M8 21h8"/>',
+  lib: '<rect x="7" y="4" width="10" height="16" rx="1.5"/><path d="M4 8h3M4 12h3M4 16h3M17 8h3M17 12h3M17 16h3"/><circle cx="10" cy="7" r=".8"/>'
 };
 const ic = (n, cls = '') => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="' + cls + '">' + (ICONS[n] || '') + '</svg>';
 const LOGO = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--cyan)"/><stop offset=".55" stop-color="var(--violet)"/><stop offset="1" stop-color="var(--magenta)"/></linearGradient></defs><rect x="2" y="2" width="36" height="36" rx="10" fill="none" stroke="url(#lg)" stroke-width="2.4"/><path d="M8 22h6l2.5-7 4 13 4-13 2.5 7h5" fill="none" stroke="url(#lg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="22" r="2" fill="var(--cyan)"/><circle cx="32" cy="22" r="2" fill="var(--magenta)"/></svg>';
@@ -2854,6 +2909,7 @@ const NAV = [
   { id: 'lab', label: 'Esquemas', icon: 'lab' },
   { id: 'proto', label: 'Protoboard', icon: 'board' },
   { id: 'arduino', label: 'Arduino', icon: 'chip' },
+  { id: 'biblioteca', label: 'Biblioteca', icon: 'lib' },
   { id: 'aprender', label: 'Aprender', icon: 'book' },
   { id: 'tutor', label: 'Tutor IA', icon: 'bot' },
   { id: 'aulas', label: 'Aulas', icon: 'users', desk: true },
@@ -2868,6 +2924,8 @@ function route() {
   let sub = null;
   const m = id.match(/^leccion-(l\d)$/);
   if (m) { id = 'aprender'; sub = m[1]; }
+  const mb = id.match(/^biblioteca-(.+)$/);   // v13: enlace directo a una ficha (#biblioteca-dht11)
+  if (mb) { id = 'biblioteca'; sub = decodeURIComponent(mb[1]); }
   if (!VIEWS[id]) id = 'inicio';
   if (currentView && VIEWS[currentView].leave) { try { VIEWS[currentView].leave(); } catch (e) { console.error(e); } }
   currentView = id;
@@ -8760,6 +8818,237 @@ VIEWS.estructura = {
         ${QA_ROWS.map(r => `<tr><td>${r[0]}</td><td><span class="badge ${r[1]}">${r[2]}</span> ${r[3]}</td><td>${r[4]}</td></tr>`).join('')}
         </table></div></div></section>
     </div>`;
+  }
+};
+
+/* ---------- v13 · Biblioteca de componentes ----------
+   Lee todo desde window.EV_DATA (archivo data/componentes.js).
+   No toca los catálogos del simulador: es una sección nueva de consulta. */
+const Biblio = {
+  cat: '', q: '', sel: null, tabCon: 'arduino', tabCod: 'arduino',
+  datos() { return window.EV_DATA || null; },
+  colorTipo(t) { const D = this.datos(); return (D && D.tiposPin[t]) || '#9aa7cc'; },
+  // Quita tildes y pasa a minúsculas para que la búsqueda sea flexible
+  norm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); },
+  // Adivina el tipo de un pin por su nombre (para pintar los conectores de las placas)
+  tipoPorNombre(n) {
+    const s = String(n).toUpperCase();
+    if (/GND/.test(s)) return 'GND';
+    if (/^(5V|3V3|3\.3V|VIN|VCC|IOREF)/.test(s)) return 'alimentación';
+    if (/SDA|SCL/.test(s)) return 'I2C';
+    if (/TX|RX|U0R|U0T/.test(s)) return 'UART';
+    if (/~/.test(s)) return 'PWM';
+    if (/^A\d|^VP|^VN|^3[4-9]\b/.test(s)) return 'analógico';
+    if (/^SD[0-3]|^CMD|^CLK|^NC|^EN|RST|RESET|AREF/.test(s)) return 'otro';
+    return 'digital';
+  },
+  /* Busca el tipo real de un pin del conector en la lista de pines de la placa.
+     ESP32: compara el número de GPIO · Arduino: compara el nombre (D11, A4, 5V…) */
+  tipoEnPlaca(c, etiqueta) {
+    if (/~/.test(etiqueta)) return 'PWM';
+    const nums = s => (String(s).match(/\b\d+\b/g) || []).concat((String(s).match(/^IO(\d+)/) || []).slice(1));
+    if (/^esp32/.test(c.id)) {
+      const n = nums(etiqueta)[0];
+      const p = n != null && c.pines.find(x => nums(x.nombre).includes(n));
+      if (p) return p.tipo;
+    }
+    const token = String(etiqueta).split(' ')[0].replace(/[^\w.]/g, '');
+    const re = new RegExp('(^|[^\\w.])' + token.replace('.', '\\.') + '($|[^\\w.])');
+    const p = token && c.pines.find(x => re.test(x.nombre));
+    return p ? p.tipo : this.tipoPorNombre(etiqueta);
+  },
+  catNombre(id) { const D = this.datos(); const k = D && D.categorias.find(x => x.id === id); return k ? k.nombre : id; },
+  filtrados() {
+    const D = this.datos(), q = this.norm(this.q);
+    return D.componentes.filter(c => (!this.cat || c.categoria === this.cat) && (!q || this.norm(c.nombre + ' ' + c.id + ' ' + c.descripcion).includes(q)));
+  },
+  tipoChip(t) { return `<span class="bib-tipo" style="--c:${this.colorTipo(t)}">${esc(t)}</span>`; },
+
+  /* Dibujo del chip DIP visto desde arriba, con sus compuertas internas */
+  dipSVG(c) {
+    const n = c.pines.length, mitad = n / 2, paso = 34, bx = 90, bw = 240, by = 24, bh = mitad * paso + 12, W = 420, H = bh + by * 2, gw = 64;
+    const yDe = p => by + 23 + (p <= mitad ? p - 1 : n - p) * paso;   // altura de cada pin
+    const nombre = p => (c.pines[p - 1].nombre.split(' · ')[1] || c.pines[p - 1].nombre);
+    let s = `<svg class="bib-dip" viewBox="0 0 ${W} ${H}" role="img" aria-label="Distribución de pines del ${esc(c.nombre)}">`;
+    s += `<rect class="cuerpo" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="6"/><path d="M${bx + bw / 2 - 13} ${by}a13 13 0 0 0 26 0" fill="#0b0c0e"/>`;
+    for (let p = 1; p <= n; p++) {
+      const izq = p <= mitad, y = yDe(p), t = c.pines[p - 1].tipo, cls = t === 'alimentación' ? 'pata vcc' : t === 'GND' ? 'pata gnd' : 'pata';
+      s += `<rect class="${cls}" x="${izq ? bx - 18 : bx + bw}" y="${y - 6}" width="18" height="12" rx="2"/>`;
+      s += `<text class="num" x="${izq ? bx + 8 : bx + bw - 8}" y="${y + 4}" text-anchor="${izq ? 'start' : 'end'}">${p}</text>`;
+      s += `<text class="nom" x="${izq ? bx - 24 : bx + bw + 24}" y="${y + 4}" text-anchor="${izq ? 'end' : 'start'}">${esc(nombre(p))}</text>`;
+    }
+    if (c.compuertas && c.compuertas.length) {
+      c.compuertas.forEach(g => {
+        const pins = g.entradas.concat([g.salida]), izq = g.salida <= mitad, ys = pins.map(yDe);
+        const x0 = izq ? bx + 40 : bx + bw - 40 - gw, y0 = Math.min(...ys) - 12, y1 = Math.max(...ys) + 12;
+        pins.forEach((p, i) => {
+          const y = yDe(p), sal = i === pins.length - 1;
+          s += `<path class="cable${sal ? ' sal' : ''}" d="M${izq ? bx : bx + bw} ${y}H${izq ? x0 : x0 + gw}"/>`;
+        });
+        s += `<rect class="compuerta" x="${x0}" y="${y0}" width="${gw}" height="${y1 - y0}" rx="8"/><text class="ctxt" x="${x0 + gw / 2}" y="${(y0 + y1) / 2 + 4}" text-anchor="middle">${esc(g.tipo)}</text>`;
+      });
+    } else if (c.bloque) {
+      const palabras = c.bloque.split(' '), lineas = [];
+      palabras.forEach(w => { const l = lineas[lineas.length - 1]; if (l && (l + ' ' + w).length <= 16) lineas[lineas.length - 1] = l + ' ' + w; else lineas.push(w); });
+      const cy = by + bh / 2 - (lineas.length - 1) * 8;
+      s += `<rect class="bloque" x="${bx + 40}" y="${by + 26}" width="${bw - 80}" height="${bh - 52}" rx="10"/>`;
+      lineas.forEach((l, i) => { s += `<text class="btxt" x="${bx + bw / 2}" y="${cy + i * 16 + 4}" text-anchor="middle">${esc(l)}</text>`; });
+    }
+    return s + '</svg>';
+  },
+
+  /* Conectores de la placa o hilera de pines del módulo */
+  pinout(c) {
+    if (c.categoria === 'ci') {
+      return this.dipSVG(c) + (c.compuertas ? '<p class="small muted" style="text-align:center">Vista desde arriba · la muesca marca el lado del pin 1 · <span style="color:var(--cyan)">cian = entradas</span> · <span style="color:var(--lime)">verde = salida</span></p>' : '<p class="small muted" style="text-align:center">Vista desde arriba · la muesca marca el lado del pin 1</p>');
+    }
+    if (c.encabezados) {
+      return `<div class="bib-lados">${Object.entries(c.encabezados).map(([lado, pins]) => `<div><div class="lbl" style="margin-bottom:6px">${esc(lado)}</div><div class="bib-pins">${pins.map(p => `<span class="bib-pin" style="--c:${this.colorTipo(this.tipoEnPlaca(c, p))}">${esc(p)}</span>`).join('')}</div></div>`).join('')}</div>`;
+    }
+    return `<div class="bib-pins">${c.pines.map(p => `<span class="bib-pin" style="--c:${this.colorTipo(p.tipo)}" title="${esc(p.funcion)}">${esc(p.nombre)}</span>`).join('')}</div>`;
+  }
+};
+
+VIEWS.biblioteca = {
+  render(sub) {
+    const D = Biblio.datos();
+    if (!D) return '<div class="view"><div class="panel empty"><h2>No se encontró la biblioteca</h2><p>Falta el archivo <code>data/componentes.js</code> junto a <code>index.html</code>.</p></div></div>';
+    if (sub && D.buscar(sub)) Biblio.sel = sub;
+    const c = Biblio.sel && D.buscar(Biblio.sel);
+    return `<div class="view">
+      <div class="view-head"><div><div class="eyebrow">Biblioteca · ${D.componentes.length} componentes</div><h1>Componentes para Arduino y ESP32</h1>
+        <p>Pines, conexiones, código de ejemplo y cuidados de cada placa, sensor, módulo y circuito integrado.</p></div></div>
+      <div class="bib${c ? ' con-ficha' : ''}" id="bib">
+        <aside class="panel bib-lista">
+          <label class="sr" for="bib-q">Buscar componente</label>
+          <input class="input" id="bib-q" type="search" placeholder="Buscar: DHT11, relé, 74LS08…" value="${esc(Biblio.q)}" autocomplete="off">
+          <div class="bib-cats" role="group" aria-label="Categorías">
+            <button class="chip-btn" data-cat="" aria-pressed="${!Biblio.cat}">Todos</button>
+            ${D.categorias.map(k => `<button class="chip-btn" data-cat="${k.id}" aria-pressed="${Biblio.cat === k.id}">${esc(k.nombre)} · ${D.porCategoria(k.id).length}</button>`).join('')}
+          </div>
+          <div class="bib-items" id="bib-items"></div>
+        </aside>
+        <section class="bib-ficha" id="bib-ficha">${c ? this.ficha(c) : this.vacio()}</section>
+      </div></div>`;
+  },
+  vacio() { return `<div class="panel empty">${ic('lib')}<h2>Elige un componente</h2><p>Usa la lista o el buscador para ver su ficha completa.</p></div>`; },
+
+  ficha(c) {
+    const B = Biblio;
+    const conA = c.conexionArduino.length, conE = c.conexionESP32.length;
+    // La pestaña elegida por el estudiante se respeta; si esta ficha no la tiene, se muestra la otra (sin olvidar la elección)
+    const tabCon = B.tabCon === 'esp32' ? (conE ? 'esp32' : 'arduino') : (conA ? 'arduino' : 'esp32');
+    const tabCod = B.tabCod === 'esp32' ? (c.codigoESP32 ? 'esp32' : 'arduino') : (c.codigoArduino ? 'arduino' : 'esp32');
+    B.codVisible = tabCod;
+    const datos = [['Voltaje de operación', c.voltajeOperacion], ['Corriente típica', c.corrienteTipica], ['Lógica', c.logica]].concat(c.datos || []).filter(r => r[1]);
+    const conex = tabCon === 'esp32' ? c.conexionESP32 : c.conexionArduino;
+    const codigo = tabCod === 'esp32' ? c.codigoESP32 : c.codigoArduino;
+    const tv = c.tablaVerdad;
+    return `
+      <div class="panel"><div class="panel-b">
+        <div class="row"><button class="btn sm ghost bib-volver" id="bib-volver">← Volver a la lista</button></div>
+        <div class="eyebrow">${esc(B.catNombre(c.categoria))}</div>
+        <h2>${esc(c.nombre)}</h2>
+        <div class="bib-badges">
+          ${c.logica && c.logica !== '—' ? `<span class="badge ${c.logica === '3.3 V' ? 'warn' : ''}">Lógica ${esc(c.logica)}</span>` : ''}
+          ${c.compatibleCon.map(p => `<span class="badge ok">${esc(p)}</span>`).join('')}
+          ${c.porVerificar.length ? '<span class="badge warn">Tiene datos por verificar</span>' : ''}
+        </div>
+        <p>${esc(c.descripcion)}</p>
+        <div class="analogy"><b>¿Cómo funciona?</b> ${esc(c.funcionamiento)}</div>
+      </div></div>
+
+      <div class="grid g2">
+        <div class="panel"><div class="panel-h"><h3>Datos eléctricos</h3></div><div class="panel-b">
+          <table class="bib-tabla"><tbody>${datos.map(([k, v]) => `<tr><td style="font-family:var(--f-body)">${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</tbody></table>
+        </div></div>
+        <div class="panel"><div class="panel-h"><h3>Pinout</h3></div><div class="panel-b">
+          ${B.pinout(c)}
+          <div class="bib-leyenda">${Object.keys(Biblio.datos().tiposPin).map(t => `<span><i style="--c:${B.colorTipo(t)}"></i>${esc(t)}</span>`).join('')}</div>
+        </div></div>
+      </div>
+
+      <div class="panel"><div class="panel-h"><h3>Pines</h3></div><div class="panel-b table-wrap">
+        <table class="bib-tabla ancha"><thead><tr><th>Pin</th><th>Tipo</th><th>Voltaje</th><th>Función</th></tr></thead>
+        <tbody>${c.pines.map(p => `<tr><td>${esc(p.nombre)}</td><td>${B.tipoChip(p.tipo)}</td><td class="mono">${esc(p.voltaje)}</td><td>${esc(p.funcion)}</td></tr>`).join('')}</tbody></table>
+      </div></div>
+
+      ${tv ? `<div class="panel"><div class="panel-h"><h3>Tabla de verdad</h3></div><div class="panel-b table-wrap">
+        <table class="t tt"><thead><tr>${tv.columnas.map((col, i) => `<th class="${i >= tv.columnas.length - tv.salidas ? 'out' : ''}">${esc(col)}</th>`).join('')}</tr></thead>
+        <tbody>${tv.filas.map(f => `<tr>${f.map(v => `<td class="mono">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+        ${tv.nota ? `<p class="small muted">${esc(tv.nota)}</p>` : ''}
+      </div></div>` : ''}
+
+      ${conA || conE ? `<div class="panel"><div class="panel-h"><h3>Conexión</h3>
+        <div class="seg" role="group" aria-label="Placa">${conA ? `<button data-tabcon="arduino" aria-pressed="${tabCon === 'arduino'}">Arduino Uno</button>` : ''}${conE ? `<button data-tabcon="esp32" aria-pressed="${tabCon === 'esp32'}">ESP32</button>` : ''}</div></div>
+        <div class="panel-b table-wrap"><table class="bib-tabla"><thead><tr><th>Componente</th><th>Placa</th><th>Nota</th></tr></thead>
+        <tbody>${conex.map(k => `<tr><td>${esc(k.componente)}</td><td class="mono">${esc(k.placa)}</td><td class="small">${esc(k.nota)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
+
+      ${codigo ? `<div class="panel bib-code"><div class="panel-h"><h3>Código de ejemplo</h3>
+        <div class="seg" role="group" aria-label="Placa del código">${c.codigoArduino ? `<button data-tabcod="arduino" aria-pressed="${tabCod === 'arduino'}">Arduino</button>` : ''}${c.codigoESP32 ? `<button data-tabcod="esp32" aria-pressed="${tabCod === 'esp32'}">ESP32</button>` : ''}</div></div>
+        <div class="panel-b"><pre class="mono"><code>${highlight(codigo)}</code></pre>
+          <div class="row bib-acciones"><button class="btn sm" id="bib-copiar">${ic('copy')} Copiar código</button><button class="btn sm primary" id="bib-probar">${ic('play')} Probar en el simulador</button></div>
+        </div></div>` : ''}
+
+      <div class="grid g2">
+        <div class="panel"><div class="panel-h"><h3>Advertencias</h3></div><div class="panel-b"><ul class="bib-avisos warn">${c.advertencias.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div></div>
+        <div class="panel"><div class="panel-h"><h3>Ideas de proyectos</h3></div><div class="panel-b"><ul class="bib-avisos">${c.aplicaciones.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div></div>
+      </div>
+
+      ${c.porVerificar.length ? `<div class="bib-verif"><b>Por verificar:</b><ul class="bib-avisos">${c.porVerificar.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}`;
+  },
+
+  mount() {
+    if (!Biblio.datos()) return;
+    $('#bib-q').oninput = e => { Biblio.q = e.target.value; this.lista(); };
+    $$('.bib-cats [data-cat]').forEach(b => b.onclick = () => {
+      Biblio.cat = b.dataset.cat;
+      $$('.bib-cats [data-cat]').forEach(x => x.setAttribute('aria-pressed', x === b));
+      this.lista();
+    });
+    $('#bib-items').onclick = e => { const b = e.target.closest('[data-id]'); if (b) this.abrir(b.dataset.id); };
+    this.lista();
+    this.enlazar();
+  },
+  lista() {
+    const el = $('#bib-items'); if (!el) return;
+    const l = Biblio.filtrados();
+    el.innerHTML = l.length ? l.map(c => `<button class="bib-item" data-id="${c.id}" aria-current="${c.id === Biblio.sel}"><b>${esc(c.nombre)}</b><span>${esc(Biblio.catNombre(c.categoria))}${c.logica && c.logica !== '—' ? ' · lógica ' + esc(c.logica) : ''}</span></button>`).join('')
+      : '<p class="small muted">No hay componentes con ese nombre.</p>';
+  },
+  // Cambia de ficha sin recargar toda la sección (replaceState no dispara "hashchange")
+  abrir(id) {
+    const c = Biblio.datos().buscar(id); if (!c) return;
+    Biblio.sel = id;
+    history.replaceState(null, '', '#biblioteca-' + encodeURIComponent(id));
+    $('#bib-ficha').innerHTML = this.ficha(c);
+    $('#bib').classList.add('con-ficha');
+    $$('#bib-items [data-id]').forEach(b => b.setAttribute('aria-current', b.dataset.id === id));
+    if (matchMedia('(max-width: 900px)').matches) $('#main').scrollTop = 0;
+    this.enlazar();
+  },
+  enlazar() {
+    const c = Biblio.sel && Biblio.datos().buscar(Biblio.sel); if (!c) return;
+    const volver = $('#bib-volver');
+    if (volver) volver.onclick = () => { Biblio.sel = null; history.replaceState(null, '', '#biblioteca'); $('#bib').classList.remove('con-ficha'); $('#bib-ficha').innerHTML = this.vacio(); this.lista(); };
+    $$('[data-tabcon]').forEach(b => b.onclick = () => { Biblio.tabCon = b.dataset.tabcon; this.abrir(c.id); });
+    $$('[data-tabcod]').forEach(b => b.onclick = () => { Biblio.tabCod = b.dataset.tabcod; this.abrir(c.id); });
+    const codigo = () => Biblio.codVisible === 'esp32' ? c.codigoESP32 : c.codigoArduino;
+    const copiar = $('#bib-copiar');
+    if (copiar) copiar.onclick = async () => {
+      try { await navigator.clipboard.writeText(codigo()); toast('Código copiado. Pégalo en Arduino IDE.', 'ok'); }
+      catch (e) { toast('No se pudo copiar automáticamente: selecciona el código y usa Ctrl+C.', 'warn'); }
+    };
+    const probar = $('#bib-probar');
+    if (probar) probar.onclick = () => {
+      // Igual que "Abrir en Arduino" de la protoboard: pasa el código al laboratorio Arduino
+      if (Ard.stop) Ard.stop(true);   // detiene el programa que estuviera corriendo
+      Ard.board = Biblio.codVisible === 'esp32' ? 'esp32' : 'uno';
+      Ard.code = codigo();
+      Ard.persist && Ard.persist();
+      toast('El simulador entiende las librerías más comunes; si alguna no está, te lo dirá.', '', 5000);
+      go('arduino');
+    };
   }
 };
 
