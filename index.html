@@ -2,6 +2,15 @@
 <title>Electroverse Lab</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Plataforma de electrónica: simulador de circuitos 2D y 3D, Arduino y ESP32 con IoT, lecciones, tutor y aulas.">
+<!-- v13: Three.js moderno (r160) para el visor 3D de la Biblioteca.
+     Es independiente del Three.js r128 que usan Esquemas y Protoboard.
+     En la Fase 4 estas direcciones apuntarán a la carpeta libs/ (sin internet). -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -724,7 +733,25 @@ textarea.input.pb-code { height: 260px; min-height: 160px; }
   .bib:not(.con-ficha) .bib-ficha { display: none; }
   .bib-volver { display: inline-flex; }
 }
-@media print { .bib-lista, .rail, .topbar, .bib-acciones { display: none !important; } }
+@media print { .bib-lista, .rail, .topbar, .bib-acciones, .v3b-barra { display: none !important; } }
+
+/* ---------- v13 · Visor 3D de la Biblioteca ---------- */
+.v3b { position: relative; height: 440px; border-top: 1px solid var(--line); overflow: hidden; border-radius: 0 0 var(--r) var(--r); background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--cyan) 8%, transparent), transparent 70%); }
+.v3b-canvas { width: 100%; height: 100%; display: block; touch-action: none; outline: none; cursor: grab; }
+.v3b-canvas:active { cursor: grabbing; }
+.v3b-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--cyan); }
+.v3b-capa { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.v3b-etq { position: absolute; left: 0; top: 0; padding: 2px 8px; border-radius: 999px; background: rgba(8, 12, 28, .86); color: #fff; font: 600 .72rem var(--f-body); white-space: nowrap; border: 1px solid var(--cyan); }
+.v3b-pin { position: absolute; left: 0; top: 0; padding: 1px 5px; border-radius: 5px; background: var(--c); color: #fff; font: 700 .62rem var(--f-mono); white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.v3b-tip { position: absolute; z-index: 3; max-width: 270px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px; border-radius: 10px; background: var(--glass-solid); border: 1px solid var(--line-2); box-shadow: var(--shadow); font-size: .82rem; pointer-events: none; }
+.v3b-tip span:not(.bib-tipo) { color: var(--muted); }
+.v3b-barra { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.v3b-barra .btn { background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.v3b-barra .btn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+.v3b-cal { margin-left: auto; background: var(--glass); }
+.v3b-ayuda { position: absolute; left: 12px; bottom: 8px; pointer-events: none; text-shadow: 0 1px 2px var(--bg); }
+.v3b-msg { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 10px; text-align: center; padding: 20px; color: var(--muted); }
+@media (max-width: 720px) { .v3b { height: 380px; } .v3b-barra .btn { min-height: 30px; padding: 0 8px; font-size: .74rem; } .v3b-cal { margin-left: 0; } .v3b-ayuda { display: none; } }
 
 </style>
 <div id="app" class="app"></div>
@@ -1151,6 +1178,9 @@ onmessage = async (ev) => {
 </script>
 <!-- v13: biblioteca de componentes (archivo de datos único) -->
 <script src="data/componentes.js"></script>
+<!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
+<script src="js/visor3d.js"></script>
+<script src="js/modelos3d.js"></script>
 <script>
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
 (function (root) {
@@ -8844,19 +8874,30 @@ const Biblio = {
   },
   /* Busca el tipo real de un pin del conector en la lista de pines de la placa.
      ESP32: compara el número de GPIO · Arduino: compara el nombre (D11, A4, 5V…) */
-  tipoEnPlaca(c, etiqueta) {
-    if (/~/.test(etiqueta)) return 'PWM';
+  buscarPin(c, etiqueta) {
     const nums = s => (String(s).match(/\b\d+\b/g) || []).concat((String(s).match(/^IO(\d+)/) || []).slice(1));
     if (/^esp32/.test(c.id)) {
       const n = nums(etiqueta)[0];
       const p = n != null && c.pines.find(x => nums(x.nombre).includes(n));
-      if (p) return p.tipo;
+      if (p) return p;
     }
     const token = String(etiqueta).split(' ')[0].replace(/[^\w.]/g, '');
+    if (!token) return null;
     const re = new RegExp('(^|[^\\w.])' + token.replace('.', '\\.') + '($|[^\\w.])');
-    const p = token && c.pines.find(x => re.test(x.nombre));
+    return c.pines.find(x => re.test(x.nombre)) || null;
+  },
+  tipoEnPlaca(c, etiqueta) {
+    if (/~/.test(etiqueta)) return 'PWM';
+    const p = this.buscarPin(c, etiqueta);
     return p ? p.tipo : this.tipoPorNombre(etiqueta);
   },
+  DESC_TIPO: { 'alimentación': 'Pin de alimentación', 'GND': 'Tierra (0 V)', 'digital': 'Entrada/salida digital', 'analógico': 'Entrada analógica', 'PWM': 'Salida con PWM (brillo o velocidad variable)', 'I2C': 'Bus I2C', 'SPI': 'Bus SPI', 'UART': 'Puerto serie', 'otro': '' },
+  // Tipo y función de un pin a partir de su etiqueta (lo usa también el visor 3D)
+  infoPin(c, etiqueta) {
+    const p = this.buscarPin(c, etiqueta), tipo = this.tipoEnPlaca(c, etiqueta);
+    return { tipo, funcion: (p && p.funcion) || this.DESC_TIPO[tipo] || '' };
+  },
+  ayuda3D() { return { infoPin: (c, e) => this.infoPin(c, e), color: t => this.colorTipo(t) }; },
   catNombre(id) { const D = this.datos(); const k = D && D.categorias.find(x => x.id === id); return k ? k.nombre : id; },
   filtrados() {
     const D = this.datos(), q = this.norm(this.q);
@@ -8936,13 +8977,7 @@ VIEWS.biblioteca = {
   ficha(c) {
     const B = Biblio;
     const conA = c.conexionArduino.length, conE = c.conexionESP32.length;
-    // La pestaña elegida por el estudiante se respeta; si esta ficha no la tiene, se muestra la otra (sin olvidar la elección)
-    const tabCon = B.tabCon === 'esp32' ? (conE ? 'esp32' : 'arduino') : (conA ? 'arduino' : 'esp32');
-    const tabCod = B.tabCod === 'esp32' ? (c.codigoESP32 ? 'esp32' : 'arduino') : (c.codigoArduino ? 'arduino' : 'esp32');
-    B.codVisible = tabCod;
     const datos = [['Voltaje de operación', c.voltajeOperacion], ['Corriente típica', c.corrienteTipica], ['Lógica', c.logica]].concat(c.datos || []).filter(r => r[1]);
-    const conex = tabCon === 'esp32' ? c.conexionESP32 : c.conexionArduino;
-    const codigo = tabCod === 'esp32' ? c.codigoESP32 : c.codigoArduino;
     const tv = c.tablaVerdad;
     return `
       <div class="panel"><div class="panel-b">
@@ -8957,6 +8992,9 @@ VIEWS.biblioteca = {
         <p>${esc(c.descripcion)}</p>
         <div class="analogy"><b>¿Cómo funciona?</b> ${esc(c.funcionamiento)}</div>
       </div></div>
+
+      <div class="panel"><div class="panel-h"><h3>Vista 3D</h3><span class="small muted">Pasa el mouse o toca una pieza para conocerla</span></div>
+        <div class="v3b" id="v3b"></div></div>
 
       <div class="grid g2">
         <div class="panel"><div class="panel-h"><h3>Datos eléctricos</h3></div><div class="panel-b">
@@ -8979,16 +9017,8 @@ VIEWS.biblioteca = {
         ${tv.nota ? `<p class="small muted">${esc(tv.nota)}</p>` : ''}
       </div></div>` : ''}
 
-      ${conA || conE ? `<div class="panel"><div class="panel-h"><h3>Conexión</h3>
-        <div class="seg" role="group" aria-label="Placa">${conA ? `<button data-tabcon="arduino" aria-pressed="${tabCon === 'arduino'}">Arduino Uno</button>` : ''}${conE ? `<button data-tabcon="esp32" aria-pressed="${tabCon === 'esp32'}">ESP32</button>` : ''}</div></div>
-        <div class="panel-b table-wrap"><table class="bib-tabla"><thead><tr><th>Componente</th><th>Placa</th><th>Nota</th></tr></thead>
-        <tbody>${conex.map(k => `<tr><td>${esc(k.componente)}</td><td class="mono">${esc(k.placa)}</td><td class="small">${esc(k.nota)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
-
-      ${codigo ? `<div class="panel bib-code"><div class="panel-h"><h3>Código de ejemplo</h3>
-        <div class="seg" role="group" aria-label="Placa del código">${c.codigoArduino ? `<button data-tabcod="arduino" aria-pressed="${tabCod === 'arduino'}">Arduino</button>` : ''}${c.codigoESP32 ? `<button data-tabcod="esp32" aria-pressed="${tabCod === 'esp32'}">ESP32</button>` : ''}</div></div>
-        <div class="panel-b"><pre class="mono"><code>${highlight(codigo)}</code></pre>
-          <div class="row bib-acciones"><button class="btn sm" id="bib-copiar">${ic('copy')} Copiar código</button><button class="btn sm primary" id="bib-probar">${ic('play')} Probar en el simulador</button></div>
-        </div></div>` : ''}
+      <div id="bib-con">${this.panelConexion(c)}</div>
+      <div id="bib-cod">${this.panelCodigo(c)}</div>
 
       <div class="grid g2">
         <div class="panel"><div class="panel-h"><h3>Advertencias</h3></div><div class="panel-b"><ul class="bib-avisos warn">${c.advertencias.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div></div>
@@ -8997,6 +9027,31 @@ VIEWS.biblioteca = {
 
       ${c.porVerificar.length ? `<div class="bib-verif"><b>Por verificar:</b><ul class="bib-avisos">${c.porVerificar.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}`;
   },
+
+  // La pestaña elegida por el estudiante se respeta; si esta ficha no la tiene, se muestra la otra (sin olvidar la elección)
+  panelConexion(c) {
+    const B = Biblio, conA = c.conexionArduino.length, conE = c.conexionESP32.length;
+    if (!conA && !conE) return '';
+    const tab = B.tabCon === 'esp32' ? (conE ? 'esp32' : 'arduino') : (conA ? 'arduino' : 'esp32');
+    const conex = tab === 'esp32' ? c.conexionESP32 : c.conexionArduino;
+    return `<div class="panel"><div class="panel-h"><h3>Conexión</h3>
+      <div class="seg" role="group" aria-label="Placa">${conA ? `<button data-tabcon="arduino" aria-pressed="${tab === 'arduino'}">Arduino Uno</button>` : ''}${conE ? `<button data-tabcon="esp32" aria-pressed="${tab === 'esp32'}">ESP32</button>` : ''}</div></div>
+      <div class="panel-b table-wrap"><table class="bib-tabla"><thead><tr><th>Componente</th><th>Placa</th><th>Nota</th></tr></thead>
+      <tbody>${conex.map(k => `<tr><td>${esc(k.componente)}</td><td class="mono">${esc(k.placa)}</td><td class="small">${esc(k.nota)}</td></tr>`).join('')}</tbody></table></div></div>`;
+  },
+  panelCodigo(c) {
+    const B = Biblio;
+    const tab = B.tabCod === 'esp32' ? (c.codigoESP32 ? 'esp32' : 'arduino') : (c.codigoArduino ? 'arduino' : 'esp32');
+    B.codVisible = tab;
+    const codigo = tab === 'esp32' ? c.codigoESP32 : c.codigoArduino;
+    if (!codigo) return '';
+    return `<div class="panel bib-code"><div class="panel-h"><h3>Código de ejemplo</h3>
+      <div class="seg" role="group" aria-label="Placa del código">${c.codigoArduino ? `<button data-tabcod="arduino" aria-pressed="${tab === 'arduino'}">Arduino</button>` : ''}${c.codigoESP32 ? `<button data-tabcod="esp32" aria-pressed="${tab === 'esp32'}">ESP32</button>` : ''}</div></div>
+      <div class="panel-b"><pre class="mono"><code>${highlight(codigo)}</code></pre>
+        <div class="row bib-acciones"><button class="btn sm" id="bib-copiar">${ic('copy')} Copiar código</button><button class="btn sm primary" id="bib-probar">${ic('play')} Probar en el simulador</button></div>
+      </div></div>`;
+  },
+  leave() { if (window.Visor3D) Visor3D.desmontar(); },
 
   mount() {
     if (!Biblio.datos()) return;
@@ -9019,6 +9074,7 @@ VIEWS.biblioteca = {
   // Cambia de ficha sin recargar toda la sección (replaceState no dispara "hashchange")
   abrir(id) {
     const c = Biblio.datos().buscar(id); if (!c) return;
+    if (!$('#bib-ficha')) { go('biblioteca-' + encodeURIComponent(id)); return; }   // si la sección no está abierta, se abre
     Biblio.sel = id;
     history.replaceState(null, '', '#biblioteca-' + encodeURIComponent(id));
     $('#bib-ficha').innerHTML = this.ficha(c);
@@ -9030,9 +9086,16 @@ VIEWS.biblioteca = {
   enlazar() {
     const c = Biblio.sel && Biblio.datos().buscar(Biblio.sel); if (!c) return;
     const volver = $('#bib-volver');
-    if (volver) volver.onclick = () => { Biblio.sel = null; history.replaceState(null, '', '#biblioteca'); $('#bib').classList.remove('con-ficha'); $('#bib-ficha').innerHTML = this.vacio(); this.lista(); };
-    $$('[data-tabcon]').forEach(b => b.onclick = () => { Biblio.tabCon = b.dataset.tabcon; this.abrir(c.id); });
-    $$('[data-tabcod]').forEach(b => b.onclick = () => { Biblio.tabCod = b.dataset.tabcod; this.abrir(c.id); });
+    if (volver) volver.onclick = () => { if (window.Visor3D) Visor3D.desmontar(); Biblio.sel = null; history.replaceState(null, '', '#biblioteca'); $('#bib').classList.remove('con-ficha'); $('#bib-ficha').innerHTML = this.vacio(); this.lista(); };
+    // Modelo 3D: se crea solo ahora, al abrir este componente (carga diferida)
+    const v3 = $('#v3b');
+    if (v3 && window.Visor3D && !(Visor3D.actual && Visor3D.actual.contenedor === v3)) Visor3D.montar(v3, c, Biblio.ayuda3D());
+    this.enlazarPestanas(c);
+  },
+  // Cambiar de pestaña solo redibuja ese panel (el 3D no se recarga)
+  enlazarPestanas(c) {
+    $$('[data-tabcon]').forEach(b => b.onclick = () => { Biblio.tabCon = b.dataset.tabcon; $('#bib-con').innerHTML = this.panelConexion(c); this.enlazarPestanas(c); });
+    $$('[data-tabcod]').forEach(b => b.onclick = () => { Biblio.tabCod = b.dataset.tabcod; $('#bib-cod').innerHTML = this.panelCodigo(c); this.enlazarPestanas(c); });
     const codigo = () => Biblio.codVisible === 'esp32' ? c.codigoESP32 : c.codigoArduino;
     const copiar = $('#bib-copiar');
     if (copiar) copiar.onclick = async () => {
