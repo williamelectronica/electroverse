@@ -1244,10 +1244,11 @@ onmessage = async (ev) => {
 
 </script>
 <!-- v13: biblioteca de componentes (archivo de datos único) -->
-<script src="data/componentes.js"></script>
+<!-- El número ?v= obliga al navegador a usar la versión nueva de cada archivo -->
+<script src="data/componentes.js?v=13.0.3"></script>
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
-<script src="js/visor3d.js"></script>
-<script src="js/modelos3d.js"></script>
+<script src="js/visor3d.js?v=13.0.3"></script>
+<script src="js/modelos3d.js?v=13.0.3"></script>
 <script>
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
 (function (root) {
@@ -5624,6 +5625,111 @@ const MOD_DEFS = {
     net(p, N) { if (N.wired('VIN') || N.wired('S')) { N.R('VIN', 'S', 30000); N.R('S', 'GIN', 7500); } }
   }
 };
+/* =====================================================================
+   v13 · Módulos y placas de la Biblioteca que se agregan a la protoboard
+   Se generan solos a partir de data/componentes.js y de las recetas 3D
+   (js/modelos3d.js). Son componentes de MONTAJE: se colocan en la mesa,
+   se cablean pin por pin y consumen corriente, pero el programa todavía
+   no los controla (eso sería simular cada librería).
+   ===================================================================== */
+(function generarModulosBib() {
+  const D = window.EV_DATA, E = window.Visor3D && Visor3D.especs;
+  if (!D || !E) return;
+  // Clave en la protoboard, prefijo del nombre (solo letras) y categoría de la bandeja
+  const LISTA = [
+    ['DHT22', 'dht22', 'DHTL', 'sensores'], ['MPU6050', 'mpu-6050', 'MPU', 'sensores'], ['TCRT', 'tcrt5000', 'TCR', 'sensores'],
+    ['TCS3200', 'tcs3200', 'TCS', 'sensores'], ['PULSO', 'pulso-cardiaco', 'HR', 'sensores'], ['BMP280', 'bmp280', 'BMP', 'sensores'],
+    ['TECLADO', 'teclado-4x4', 'KP', 'sensores'],
+    ['RELE2', 'rele-2', 'RLD', 'actuadores'], ['L298N', 'l298n', 'MD', 'actuadores'], ['DRV8833', 'drv8833', 'MDR', 'actuadores'],
+    ['ULN2003', 'uln2003-28byj48', 'STP', 'actuadores'], ['BOMBA', 'mini-bomba', 'PMP', 'actuadores'], ['LASER', 'laser-ky008', 'LSR', 'actuadores'],
+    ['MP3', 'mp3-tf-16p', 'MPT', 'actuadores'],
+    ['TFT', 'tft-24', 'TFT', 'pantallas'], ['MAX7219', 'matriz-max7219', 'MTX', 'pantallas'], ['SEG4', 'display-7seg-4', 'DSP', 'pantallas'],
+    ['RGB', 'led-rgb-ky016', 'RGB', 'pantallas'],
+    ['HC05', 'hc-05', 'BT', 'comunicacion'], ['GPS', 'gps-neo-6m', 'GPS', 'comunicacion'], ['RF433', 'rf-433', 'RF', 'comunicacion'],
+    ['DS1302', 'rtc-ds1302', 'RTC', 'comunicacion'], ['DS3231', 'rtc-ds3231', 'RTCP', 'comunicacion'], ['NIVEL', 'conversor-nivel', 'LVL', 'comunicacion'],
+    ['MEGA', 'mega-2560', 'MEGA', 'mcu'], ['ESPCAM', 'esp32-cam', 'CAM', 'mcu'], ['ESPS3', 'esp32-s3-devkit', 'SDK', 'mcu']
+  ];
+  // Pines de los módulos que no tienen receta simple (tamaño en mm, color y filas de pines)
+  const EXTRA = {
+    'uln2003-28byj48': { w: 35, d: 32, color: '#1b6a3c', filas: [['oeste', ['IN1', 'IN2', 'IN3', 'IN4']], ['este', [{ n: '+', t: 'alimentación' }, { n: '−', t: 'GND' }]]] },
+    'mini-bomba': { w: 30, d: 30, color: '#2a2d33', filas: [['oeste', [{ n: '+', t: 'alimentación' }, { n: '−', t: 'GND' }]]] },
+    'gps-neo-6m': { w: 62, d: 36, color: '#1f4fb4', filas: [['sur', ['VCC', 'RX', 'TX', 'GND']]] },
+    'rf-433': { w: 52, d: 20, color: '#1b6a3c', filas: [['sur', ['TX DATA', { n: 'TX VCC', t: 'alimentación' }, { n: 'TX GND', t: 'GND' }, { n: 'RX VCC', t: 'alimentación' }, 'RX DATA', 'RX DATA2', { n: 'RX GND', t: 'GND' }]]] },
+    'display-7seg-4': { w: 50.4, d: 19, color: '#2b2d31', filas: [['sur', ['e', 'd', 'DP', 'c', 'g', 'D4']], ['norte', ['D1', 'a', 'f', 'D2', 'D3', 'b']]] },
+    'teclado-4x4': { w: 69, d: 76, color: '#202124', filas: [['sur', ['R1', 'R2', 'R3', 'R4', 'C1', 'C2', 'C3', 'C4']]] },
+    'rele-2': { terminales: ['NO1', 'COM1', 'NC1', 'NO2', 'COM2', 'NC2'] },
+    'l298n': { terminales: [{ n: '12V', t: 'alimentación' }, { n: 'GND', t: 'GND' }, { n: '5V', t: 'alimentación' }, 'OUT1', 'OUT2', 'OUT3', 'OUT4'] },
+    'mega-2560': { w: 101.6, d: 53.3, color: '#08546b', placa: true },
+    'esp32-cam': { w: 27, d: 40.5, color: '#1c1e23', placa: true },
+    'esp32-s3-devkit': { w: 25.4, d: 62.7, color: '#1c1e23', placa: true }
+  };
+  const tipoDe = (n, t) => {
+    if (t) return t === 'alimentación' ? 'pwr' : t === 'GND' ? 'gnd' : t === 'I2C' ? 'i2c' : t === 'otro' ? 'term' : 'sig';
+    if (/^(GND|−|VSS)/.test(n) || /GND$/.test(n)) return 'gnd';
+    if (/^(VCC|5V|3V3|3\.3V|VM|VIN|\+|\+5V|HV|LV|VDD)$/.test(n)) return 'pwr';
+    if (/SDA|SCL/.test(n)) return 'i2c';
+    return 'sig';
+  };
+  // Pines de las placas de montaje (Mega, CAM, S3), en unidades de hueco desde la esquina superior izquierda
+  const pinesPlaca = id => {
+    const r = [], u = v => +(v / 2.54).toFixed(2);
+    if (id === 'mega-2560') {
+      const sup = ['SCL', 'SDA', 'AREF', 'GND', 'D13', 'D12', 'D11', 'D10', 'D9', 'D8', 'D7', 'D6', 'D5', 'D4', 'D3', 'D2', 'D1', 'D0', 'D14', 'D15', 'D16', 'D17', 'D18', 'D19', 'D20', 'D21'];
+      sup.forEach((n, i) => r.push([n, u(i < 10 ? 17.9 + i * 2.54 : i < 18 ? 44.45 + (i - 10) * 2.54 : 66.04 + (i - 18) * 2.54), 1, n, 'd']));
+      ['NC', 'IOREF', 'RESET', '3.3V', '5V', 'GND', 'GND', 'VIN'].concat(Array.from({ length: 16 }, (_, i) => 'A' + i))
+        .forEach((n, i) => r.push([n, u(i < 8 ? 27.9 + i * 2.54 : i < 16 ? 50.8 + (i - 8) * 2.54 : 73.66 + (i - 16) * 2.54), 20, n, 'u']));
+      for (let f = 0; f < 18; f++) for (let k = 0; k < 2; k++) r.push([f === 0 ? '5V' : f === 17 ? 'GND' : 'D' + (22 + (f - 1) * 2 + k), u(90.17 + k * 2.54), u(53.3 - 49.53 + f * 2.54), null, k ? 'r' : 'l']);
+    } else if (id === 'esp32-cam') {
+      const izq = ['5V', 'GND', 'IO12', 'IO13', 'IO15', 'IO14', 'IO2', 'IO4'], der = ['3V3', 'IO16', 'IO0', 'GND', 'VCC', 'U0R', 'U0T', 'GND'];
+      izq.forEach((n, i) => r.push([n, u(13.5 - 11.43), u(20.25 + 16.5 - i * 2.54), null, 'r']));
+      der.forEach((n, i) => r.push([n, u(13.5 + 11.43), u(20.25 + 16.5 - i * 2.54), null, 'l']));
+    } else if (id === 'esp32-s3-devkit') {
+      const J1 = ['3V3', '3V3', 'RST', '4', '5', '6', '7', '15', '16', '17', '18', '8', '3', '46', '9', '10', '11', '12', '13', '14', '5V', 'GND'];
+      const J3 = ['GND', 'TX43', 'RX44', '1', '2', '42', '41', '40', '39', '38', '37', '36', '35', '0', '45', '48', '47', '21', '20', '19', 'GND', 'GND'];
+      J1.forEach((n, i) => r.push([/^\d+$/.test(n) ? 'G' + n : n, u(12.7 - 11.43), u(31.35 - 25.67 + i * 2.54), null, 'r']));
+      J3.forEach((n, i) => r.push([/^\d+$/.test(n) ? 'G' + n : n, u(12.7 + 11.43), u(31.35 - 25.67 + i * 2.54), null, 'l']));
+    }
+    return r.map(([n, x, y, , lp]) => ({ n, x, y, lp }));
+  };
+  LISTA.forEach(([k, id, pref, cat]) => {
+    const c = D.buscar(id); if (!c || MOD_DEFS[k]) return;
+    const es = E[id] || {}, ex = EXTRA[id] || {};
+    const wmm = ex.w || es.w || 30, dmm = ex.d || es.d || 20;
+    const w = +(wmm / 2.54).toFixed(1), h = +(dmm / 2.54).toFixed(1);
+    const pins = [], usados = {};
+    const idDe = n => { let b = String(n).replace(/−/g, 'NEG').replace(/[^\w+-]/g, '') || 'P'; let s = b, i = 2; while (usados[s]) s = b + (i++); usados[s] = 1; return s; };
+    const poner = (n, t, x, y, lp) => pins.push([idDe(n), x, y, tipoDe(n, t), String(n), lp]);
+    if (ex.placa) pinesPlaca(id).forEach(q => poner(q.n, null, q.x, q.y, q.lp));
+    else {
+      const filas = ex.filas || [[es.lado || 'sur', es.pines || []]].concat(es.pines2 ? [[es.lado2 || 'norte', es.pines2]] : []);
+      filas.forEach(([lado, lista]) => {
+        const n = lista.length, desde = i => (i - (n - 1) / 2);
+        lista.forEach((e, i) => {
+          const nom = e && typeof e === 'object' ? e.n : e, t = e && typeof e === 'object' ? e.t : null;
+          if (lado === 'sur') poner(nom, t, +(w / 2 + desde(i)).toFixed(2), +(h - 0.8).toFixed(2), 'u');
+          else if (lado === 'norte') poner(nom, t, +(w / 2 + desde(i)).toFixed(2), 0.8, 'd');
+          else if (lado === 'oeste') poner(nom, t, 0.8, +(h / 2 + desde(i)).toFixed(2), 'r');
+          else poner(nom, t, +(w - 0.8).toFixed(2), +(h / 2 + desde(i)).toFixed(2), 'l');
+        });
+      });
+      // Bornes de tornillo (relés y driver de motores): van en el lado derecho
+      (ex.terminales || []).forEach((e, i, a) => { const o = e && typeof e === 'object'; poner(o ? e.n : e, o ? e.t : 'otro', +(w - 0.9).toFixed(2), +(h / 2 + (i - (a.length - 1) / 2) * Math.min(1.3, (h - 2) / Math.max(1, a.length - 1))).toFixed(2), 'l'); });
+    }
+    const color = ex.color || es.color || '#1f4fb4';
+    MOD_DEFS[k] = {
+      name: c.nombre, short: c.nombre.split(' · ')[0].split(' (')[0], cat, w: Math.max(w, 4), h: Math.max(h, 3), color, load: 2500, vmin: 3,
+      pins, bib: id, montaje: true, d: {}, pref,
+      info: c.descripcion + ' Componente de montaje: se cablea y se alimenta, pero el programa todavía no lo controla.',
+      draw(p, st) {
+        const W = mm(this.w), H = mm(this.h), s = this.short;
+        return MODX.pcb(this.w, this.h, this.color, 4) + MODX.hole(6, 6) + MODX.hole(W - 6, 6) + MODX.hole(6, H - 6) + MODX.hole(W - 6, H - 6) +
+          MODX.t(W / 2, H / 2 + 3, esc(s), Math.max(6, Math.min(12, W / s.length * 1.3)), '#ffffff') +
+          (st && st.pw ? MODX.t(W / 2, H / 2 + 15, 'alimentado', 6, '#22e5ff') : '') + modHeader(this);
+      }
+    };
+  });
+})();
+
 /* normaliza pines y valores */
 Object.entries(MOD_DEFS).forEach(([k, d]) => {
   d.k = k;
@@ -5635,6 +5741,8 @@ Object.entries(MOD_DEFS).forEach(([k, d]) => {
 });
 const MOD_CATS = [['pantallas', 'Pantallas y sonido'], ['actuadores', 'Actuadores'], ['sensores', 'Sensores']];
 const MOD_PREFIX = { LCD: 'LCD', OLED: 'OLED', NPX: 'NPX', BZP: 'BZ', SERVO: 'SRV', RELAY: 'REL', US: 'US', DHT: 'DHT', BME: 'BME', DS18: 'TS', HX: 'HX', RFID: 'RFID', LDRM: 'SL', MQ2: 'MQ', MQ135: 'MQ', SOIL: 'SH', FLAME: 'SF', SOUND: 'SS', JOY: 'JOY', PIR: 'PIR', IROBS: 'IR', HALL: 'HALL', TILT: 'TILT', KEY: 'KEY', LIMIT: 'FC', REED: 'REED', ACS: 'ACS', VSEN: 'SV' };
+Object.values(MOD_DEFS).forEach(d => { if (d.pref && !MOD_PREFIX[d.k]) MOD_PREFIX[d.k] = d.pref; });   // v13: prefijos de los módulos de la Biblioteca
+MOD_CATS.push(['comunicacion', 'Comunicación']);
 
 /* ===== Protoboard de 830 puntos: modelo, conexiones, componentes reales y vista superior ===== */
 const PB = { P: 16, OX: 132, OY: 30, COLS: 63 };
@@ -5665,8 +5773,23 @@ const MCU_DEFS = (() => {
       id => /^D\d+$/.test(id) ? +id.slice(1) : espNum[id] !== undefined ? espNum[id] : null,
       id => /^GND/.test(id) ? { kind: 'gnd' } : id === 'VIN' ? { kind: 'pwr', v: 5 } : id === '3V3' ? { kind: 'pwr', v: 3.3 } : id === 'EN' ? { kind: 'nc' } : { kind: 'io' })
   };
-  [uno, esp].forEach(d => { d.byId = Object.fromEntries(d.pins.map(p => [p.id, p])); });
-  return { UNO: uno, ESP32: esp };
+  /* v13: Nano (mismo chip que el UNO) y ESP32 de 38 pines (mismo chip que el DevKit) ejecutan programas */
+  const nano = {
+    name: 'Arduino Nano', short: 'NANO', board: 'uno', vio: 5, w: 17, h: 7, x0: 4, color: '#08546b', led: 13,
+    pins: mk([[0.5, 1, ['D12', 'D11', 'D10', 'D9', 'D8', 'D7', 'D6', 'D5', 'D4', 'D3', 'D2', 'GND1', 'RST1', 'D0', 'D1']],
+      [6.5, 1, ['D13', '3V3', 'AREF', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', '5V', 'RST2', 'GND2', 'VIN']]],
+      id => /^D\d+$/.test(id) ? +id.slice(1) : /^A\d$/.test(id) ? 14 + +id[1] : null,
+      id => /^GND/.test(id) ? { kind: 'gnd' } : id === '5V' ? { kind: 'pwr', v: 5 } : id === '3V3' ? { kind: 'pwr', v: 3.3 } : /^A[67]$/.test(id) ? { kind: 'nc' } : /^[DA]\d/.test(id) ? { kind: 'io' } : { kind: 'nc' })
+  };
+  const esp38 = {
+    name: 'ESP32 DevKit (38 pines)', short: 'ESP32-38', board: 'esp32', vio: 3.3, w: 22, h: 11, x0: 4, color: '#1d1f24', led: 2,
+    pins: mk([[1, 2, ['5V', 'CMD', 'SD3', 'SD2', 'D13', 'GND1', 'D12', 'D14', 'D27', 'D26', 'D25', 'D33', 'D32', 'D35', 'D34', 'VN', 'VP', 'EN', '3V3']],
+      [10, 2, ['CLK', 'SD0', 'SD1', 'D15', 'D2', 'D0', 'D4', 'RX2', 'TX2', 'D5', 'D18', 'D19', 'GND2', 'D21', 'RX0', 'TX0', 'D22', 'D23', 'GND3']]],
+      id => /^D\d+$/.test(id) ? +id.slice(1) : espNum[id] !== undefined ? espNum[id] : null,
+      id => /^GND/.test(id) ? { kind: 'gnd' } : id === '5V' ? { kind: 'pwr', v: 5 } : id === '3V3' ? { kind: 'pwr', v: 3.3 } : /^(EN|CMD|CLK|SD\d)$/.test(id) ? { kind: 'nc' } : { kind: 'io' })
+  };
+  [uno, esp, nano, esp38].forEach(d => { d.byId = Object.fromEntries(d.pins.map(p => [p.id, p])); });
+  return { UNO: uno, ESP32: esp, NANO: nano, ESP32_38: esp38 };
 })();
 let PB_MCU_K = null;
 let PB_MODS = {}, PB_MCU_AT = [4, 0];
@@ -5733,7 +5856,7 @@ function groupHoles(g) {
 }
 
 /* ---------- Catálogo de componentes de protoboard ---------- */
-const PB_CATS = [['mcu', 'Arduino y ESP32'], ['m_sensores', 'Sensores'], ['m_pantallas', 'Pantallas y sonido'], ['m_actuadores', 'Actuadores'], ['fuentes', 'Alimentación'], ['pasivos', 'Pasivos'], ['semi', 'Semiconductores'], ['ic', 'Circuitos integrados'], ['es', 'Entradas y salidas'], ['cables', 'Cables']];
+const PB_CATS = [['mcu', 'Placas'], ['m_sensores', 'Sensores'], ['m_pantallas', 'Pantallas y sonido'], ['m_actuadores', 'Actuadores'], ['m_comunicacion', 'Comunicación'], ['fuentes', 'Alimentación'], ['pasivos', 'Pasivos'], ['semi', 'Semiconductores'], ['ic', 'Circuitos integrados'], ['es', 'Entradas y salidas'], ['cables', 'Cables']];
 const IC_GATE4 = [[1, 2, 3], [4, 5, 6], [9, 10, 8], [12, 13, 11]];
 const IC_DEFS = {
   HC00: { n: 14, name: '74HC00', title: '4 compuertas NAND', names: ['1A', '1B', '1Y', '2A', '2B', '2Y', 'GND', '3Y', '3A', '3B', '4Y', '4A', '4B', 'VCC'], vcc: 14, gnd: 7, units: IC_GATE4.map(p => ({ t: 'NAND', pins: p })) },
@@ -5755,6 +5878,8 @@ const TO92 = { BC547: ['NPN', 'BC547', 'CBE'], Q2222: ['NPN', '2N2222', 'EBC'], 
 const PB_CAT = [
   { k: 'UNO', name: 'Arduino UNO', cat: 'mcu', place: 'mcu', d: {}, info: 'Se coloca junto a la protoboard. Une sus pines con cables y escribe el programa en el panel Programa.' },
   { k: 'ESP32', name: 'ESP32 DevKit', cat: 'mcu', place: 'mcu', d: {}, info: 'Trabaja a 3,3 V. Une sus pines con cables y escribe el programa en el panel Programa.' },
+  { k: 'NANO', name: 'Arduino Nano', cat: 'mcu', place: 'mcu', d: {}, info: 'El mismo cerebro que el UNO en tamaño pequeño. Ejecuta los mismos programas.' },
+  { k: 'ESP32_38', name: 'ESP32 DevKit (38 pines)', cat: 'mcu', place: 'mcu', d: {}, info: 'Versión de 38 pines del ESP32. Trabaja a 3,3 V y ejecuta los programas de ESP32.' },
   { k: 'BAT9', name: 'Batería 9 V', cat: 'fuentes', place: 'off', d: { v: 9 }, info: 'Toca el hueco para el cable rojo (+) y luego el del negro (−).' },
   { k: 'BAT45', name: 'Portapilas 3×AA (4,5 V)', cat: 'fuentes', place: 'off', d: { v: 4.5 }, info: 'Ideal para chips 74HC (2 a 6 V).' },
   { k: 'SUP', name: 'Fuente de laboratorio', cat: 'fuentes', place: 'off', d: { v: 5 }, info: 'Voltaje ajustable de 0 a 15 V en Propiedades.' },
@@ -5799,7 +5924,7 @@ const PB_CAT = [
   { k: 'WIRE', name: 'Cable puente', cat: 'cables', place: 'two', d: { color: 'auto' }, info: 'Toca dos huecos. Elige el color abajo.' }
 ];
 PB_CAT.forEach(c => { if (IC_DEFS[c.k]) { const d = IC_DEFS[c.k]; c.info = d.title + ', ' + d.n + ' pines. ' + (d.vcc ? 'Pin ' + d.vcc + ' VCC (+), pin ' + d.gnd + ' GND (−).' : c.k === 'NE555' ? 'Pin 8 VCC, pin 1 GND, pin 4 RESET a +.' : 'Pin 8 VCC, pin 4 GND.'); } });
-Object.values(MOD_DEFS).forEach(d => PB_CAT.push({ k: d.k, name: d.name, cat: 'm_' + d.cat, place: 'mod', d: d.d, info: d.info }));
+Object.values(MOD_DEFS).forEach(d => PB_CAT.push({ k: d.k, name: d.name, cat: d.cat === 'mcu' ? 'mcu' : 'm_' + d.cat, place: 'mod', d: d.d, info: d.info }));
 /* forma del cable: sin dobleces cae en arco suave; con puntos de paso (p.via, en unidades de hueco) sigue el recorrido que le dio el usuario */
 const WIRE_COL_OF = p => (p.color && WIRE_COLS[p.color] ? WIRE_COLS[p.color] : WIRE_COLS[p.autoColor || 'azul']);
 const viaPx = q => [PB.OX + q[0] * PB.P, PB.OY + q[1] * PB.P];
@@ -5812,7 +5937,7 @@ function pbWireD(A, B, via) {
 }
 const segDist = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1e-9, t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
 const PB_BY_K = Object.fromEntries(PB_CAT.map(c => [c.k, c]));
-const PB_CAT_SHORT = { mcu: 'Placas', m_sensores: 'Sensores', m_pantallas: 'Pantallas', m_actuadores: 'Actuad.', fuentes: 'Energía', pasivos: 'Pasivos', semi: 'Semic.', ic: 'Chips', es: 'E/S', cables: 'Cables' };
+const PB_CAT_SHORT = { mcu: 'Placas', m_sensores: 'Sensores', m_pantallas: 'Pantallas', m_actuadores: 'Actuad.', m_comunicacion: 'Comunic.', fuentes: 'Energía', pasivos: 'Pasivos', semi: 'Semic.', ic: 'Chips', es: 'E/S', cables: 'Cables' };
 const PB_CAT_ICON = (() => {
   const w = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   return {
@@ -5820,6 +5945,7 @@ const PB_CAT_ICON = (() => {
     m_sensores: w('<circle cx="12" cy="12" r="2.2"/><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9M16.5 7.5a6.4 6.4 0 0 1 0 9M4.6 4.6a10.5 10.5 0 0 0 0 14.8M19.4 4.6a10.5 10.5 0 0 1 0 14.8"/>'),
     m_pantallas: w('<rect x="2.5" y="5" width="19" height="12" rx="2"/><path d="M6 9h8M6 13h5M8 20h8"/>'),
     m_actuadores: w('<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>'),
+    m_comunicacion: w('<path d="M12 20v-8"/><circle cx="12" cy="10" r="2"/><path d="M8 6.5a6 6 0 0 0 0 7M16 6.5a6 6 0 0 1 0 7M5 3.8a10 10 0 0 0 0 12.4M19 3.8a10 10 0 0 1 0 12.4"/>'),
     fuentes: w('<rect x="6" y="6" width="12" height="15" rx="2"/><path d="M9.5 6V3.5M14.5 6V3.5M12 10v5M9.5 12.5h5"/>'),
     pasivos: w('<path d="M2 12h3l1.5-4 3 8 3-8 3 8 1.5-4h5"/>'),
     semi: w('<path d="M2 12h6M16 12h6M8 6v12l8-6zM16 6v12"/>'),
@@ -5829,7 +5955,7 @@ const PB_CAT_ICON = (() => {
   };
 })();
 const WIRE_COLS = { rojo: '#e53935', negro: '#1d1d1f', azul: '#1e63d6', verde: '#1f9d55', amarillo: '#f2c200', naranja: '#f57c1f', blanco: '#e9e9ee', morado: '#8a4fd6' };
-const PB_PREFIX = { LM35: 'U', UNO: 'MCU', ESP32: 'MCU', BAT9: 'B', BAT45: 'B', SUP: 'PS', R: 'R', POT: 'RV', CC: 'C', CE: 'C', LDR: 'LDR', NTC: 'TH', LED: 'D', D4007: 'D', D4148: 'D', ZEN: 'DZ', BC547: 'Q', Q2222: 'Q', BC557: 'Q', Q3906: 'Q', M2N7000: 'Q', IRFZ44N: 'Q', REG7805: 'U', SEG7: 'DS', BTN: 'SW', SLIDE: 'SW', DIPSW: 'SW', BUZ: 'BZ', MOTOR: 'M', WIRE: 'W' };
+const PB_PREFIX = { LM35: 'U', UNO: 'MCU', ESP32: 'MCU', NANO: 'MCU', ESP32_38: 'MCU', BAT9: 'B', BAT45: 'B', SUP: 'PS', R: 'R', POT: 'RV', CC: 'C', CE: 'C', LDR: 'LDR', NTC: 'TH', LED: 'D', D4007: 'D', D4148: 'D', ZEN: 'DZ', BC547: 'Q', Q2222: 'Q', BC557: 'Q', Q3906: 'Q', M2N7000: 'Q', IRFZ44N: 'Q', REG7805: 'U', SEG7: 'DS', BTN: 'SW', SLIDE: 'SW', DIPSW: 'SW', BUZ: 'BZ', MOTOR: 'M', WIRE: 'W' };
 Object.assign(PB_PREFIX, MOD_PREFIX);
 
 /* huella: huecos que ocupa cada componente según el hueco de referencia */
@@ -5870,7 +5996,7 @@ function pbPinTags(p) {
 /* nombre corto de un hueco para los avisos de conexión */
 function hShort(h) {
   const q = hParse(h); if (!q) return h;
-  if (q.mcu) return (PB_MCU_K === 'UNO' ? 'Arduino ' : 'ESP32 ') + q.pin.label;
+  if (q.mcu) return (MCU_DEFS[PB_MCU_K].board === 'uno' ? 'Arduino ' : 'ESP32 ') + q.pin.label;
   if (q.mod) return q.part.id + ' ' + q.pin.label;
   const b = Proto.boards > 1 ? 'P' + q.board + ' ' : '';
   return b + (q.rail ? 'riel ' + (q.row[1] === '+' ? '+' : '−') + ' ' + q.col : q.col + q.row);
@@ -6667,7 +6793,7 @@ VIEWS.proto = {
     $('#pb-code').oninput = e => { R.code = e.target.value; R.persistCode(); };
     $('#pb-code').onkeydown = e => { if (e.key === 'Tab') { e.preventDefault(); const t = e.target, a = t.selectionStart; t.setRangeText('  ', a, t.selectionEnd, 'end'); R.code = t.value; } if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); R.mcuRun(); } };
     $('#pb-mcu-ex').onchange = e => { if (e.target.value) { R.code = MCU_CODE[e.target.value]; $('#pb-code').value = R.code; R.persist(); e.target.value = ''; } };
-    $('#pb-mcu-full').onclick = () => { const mp = R.mcuPart(); Ard.board = mp && mp.k === 'ESP32' ? 'esp32' : 'uno'; Ard.code = R.code; Ard.persist && Ard.persist(); go('arduino'); };
+    $('#pb-mcu-full').onclick = () => { const mp = R.mcuPart(); Ard.board = mp && MCU_DEFS[mp.k] ? MCU_DEFS[mp.k].board : 'uno'; Ard.code = R.code; Ard.persist && Ard.persist(); go('arduino'); };
     $('#pb-serial-f').onsubmit = e => { e.preventDefault(); const v = $('#pb-serial-in').value; if (!R.mcuRT.worker) { toast('Primero ejecuta el programa.', 'warn'); return; } R.mcuRT.worker.postMessage({ type: 'serialIn', text: v + '\n' }); R.mcuRT.serial += '> ' + v + '\n'; R.mcuRT.serialDirty = true; $('#pb-serial-in').value = ''; };
     R.renderMcuPanel();
     const zoom = d => { R.zoom = clamp(R.zoom * d, 1, 3); svg.style.width = (R.zoom * 100) + '%'; };
@@ -6903,6 +7029,8 @@ function pbTrayIcon(c) {
     IRFZ44N: `<rect x="12" y="1" width="24" height="9" rx="1" fill="#c3c8d0"/><rect x="12" y="10" width="24" height="12" fill="#1c1d21"/><path d="M18 22v9M24 22v9M30 22v9" stroke="#b9bdc5" stroke-width="1.6"/>`,
     UNO: `<rect x="6" y="4" width="38" height="25" rx="3" fill="#0b7a96"/><rect x="2" y="9" width="8" height="7" fill="#c3c8d0"/><rect x="20" y="5" width="22" height="3" fill="#15171b"/><rect x="22" y="25" width="18" height="3" fill="#15171b"/><rect x="22" y="14" width="14" height="5" fill="#16171b"/><text x="13" y="21" font-size="6" fill="#fff" font-family="monospace" font-weight="700">UNO</text>`,
     ESP32: `<rect x="5" y="7" width="38" height="18" rx="2" fill="#1d1f24"/><rect x="26" y="9" width="15" height="14" rx="1" fill="#b8bec8"/><rect x="1" y="13" width="6" height="6" fill="#c3c8d0"/><path d="M7 8h18M7 24h18" stroke="#c9cdd4" stroke-width="2" stroke-dasharray="1.4 1.6"/>`,
+    ESP32_38: `<rect x="3" y="6" width="42" height="20" rx="2" fill="#1d1f24"/><rect x="27" y="8.5" width="15" height="15" rx="1" fill="#b8bec8"/><rect x="0" y="13" width="6" height="6" fill="#c3c8d0"/><path d="M6 7.5h20M6 24.5h20" stroke="#c9cdd4" stroke-width="2" stroke-dasharray="1.4 1.6"/>`,
+    NANO: `<rect x="6" y="9" width="36" height="14" rx="2" fill="#08546b"/><rect x="1" y="13" width="7" height="6" fill="#c3c8d0"/><rect x="20" y="12.5" width="7" height="7" transform="rotate(45 23.5 16)" fill="#16171b"/><path d="M9 10h31M9 22h31" stroke="#d9ab45" stroke-width="2" stroke-dasharray="1.4 1.6"/>`,
     REG7805: `<rect x="12" y="1" width="24" height="9" rx="1" fill="#c3c8d0"/><rect x="12" y="10" width="24" height="12" fill="#1c1d21"/><path d="M18 22v9M24 22v9M30 22v9" stroke="#b9bdc5" stroke-width="1.6"/>`
   };
   return box(map[k] || leg);
@@ -7181,7 +7309,7 @@ const Proto3D = Object.assign(Object.create(View3D), {
         g.userData.mid = c; break;
       }
       case '__MOD__': break;
-      case 'UNO': case 'ESP32': {
+      case 'UNO': case 'ESP32': case 'NANO': case 'ESP32_38': {
         const d = Object.assign(Object.create(MCU_DEFS[p.k]), { x0: PB_MCU_AT[0] }), y0 = mcuY0() + PB_MCU_AT[1], cx = d.x0 + d.w / 2 - 32, cz = y0 + d.h / 2 - 8;
         const c = new T.Vector3(cx, 0, cz);
         const alta = this.mcuAlta(p, MCU_DEFS[p.k]);   // v13: placa de alta calidad (la misma de la Biblioteca)
@@ -7314,11 +7442,12 @@ const Proto3D = Object.assign(Object.create(View3D), {
     const clave = 'mcu:' + p.k, en = this.altaCache[clave];
     if (en) return en;
     const T = THREE, V = this.altaV(); if (!V) return null;
-    const m = this.modeloBib(p.k === 'UNO' ? 'uno-r3' : 'esp32-devkit-30'); if (!m) return null;
+    const m = this.modeloBib({ UNO: 'uno-r3', ESP32: 'esp32-devkit-30', NANO: 'nano', ESP32_38: 'esp32-devkit-38' }[p.k]); if (!m) return null;
     const w = new T.Group(); w.userData.altaCache = true; w.userData.clave = clave;
     const k = 1 / 2.54, yTop = 1.58;   // 1 unidad = 1 hueco = 2,54 mm
     m.scale.setScalar(k); m.position.y = yTop - 1.6 * k;
-    if (p.k === 'ESP32') m.rotation.y = -Math.PI / 2;   // en la mesa el USB queda a la izquierda
+    if (p.k === 'ESP32' || p.k === 'ESP32_38') m.rotation.y = -Math.PI / 2;   // en la mesa el USB queda a la izquierda
+    if (p.k === 'NANO') m.rotation.y = Math.PI / 2;
     w.add(m);
     // Separadores de latón bajo la placa
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => { const st = new T.Mesh(new T.CylinderGeometry(0.25, 0.25, yTop - 0.63, 10), this.mat('standoff', { color: 0xd8c27a, metalness: 0.6 })); st.position.set(sx * (d.w / 2 - 1), (yTop - 0.63) / 2, sz * (d.h / 2 - 1)); w.add(st); });
@@ -7337,19 +7466,20 @@ const Proto3D = Object.assign(Object.create(View3D), {
     const lam = this.rotulosProto(V, d.w, d.h, pins, yTop + 0.012, p.k === 'UNO' ? { titulo: ['UNO R3', 15.8, 12.2, 1.6] } : {});
     lam.position.x -= d.w / 2; lam.position.z -= d.h / 2; w.add(lam);
     // LED del pin 13 (UNO) o GPIO 2 (ESP32): se enciende con el programa
-    const lm = new T.MeshStandardMaterial({ color: p.k === 'UNO' ? 0xffb300 : 0x3d8bff, emissive: p.k === 'UNO' ? 0xffb300 : 0x3d8bff, emissiveIntensity: 0.05 });
-    const led = this.buscarInfo(m, p.k === 'UNO' ? 'LED "L" (pin 13)' : 'LED azul (GPIO 2)');
+    const uno = d.board === 'uno', lm = new T.MeshStandardMaterial({ color: uno ? 0xffb300 : 0x3d8bff, emissive: uno ? 0xffb300 : 0x3d8bff, emissiveIntensity: 0.05 });
+    const led = this.buscarInfo(m, uno ? 'LED "L" (pin 13)' : 'LED azul (GPIO 2)');
     if (led && led.children[1]) led.children[1].material = lm;
-    w.userData.mcuLed = { mat: lm, pin: p.k === 'UNO' ? 13 : 2 }; w.userData.ledMatAlta = lm;
+    w.userData.mcuLed = { mat: lm, pin: uno ? 13 : 2 }; w.userData.ledMatAlta = lm;
     this.altaCache[clave] = w;
     return w;
   },
   modAlta(p, D) {
-    const id = this.BIB_DE_MOD[p.k]; if (!id) return null;
+    const id = this.BIB_DE_MOD[p.k] || D.bib; if (!id) return null;   // los módulos nuevos traen su modelo en D.bib
     const en = this.altaCache[p.id];
     if (en && en.userData.k === p.k) return en;
     const T = THREE, V = this.altaV(); if (!V) return null;
     const m = this.modeloBib(id, p.k === 'SERVO'); if (!m) return null;
+    if (id === 'uln2003-28byj48') { const mot = this.buscarInfo(m, 'Motor paso a paso 28BYJ-48'); if (mot && mot.parent) mot.parent.remove(mot); }   // en la mesa va solo la placa del driver
     const w = new T.Group(); w.userData.altaCache = true; w.userData.clave = p.id; w.userData.k = p.k;
     // Escala para que el modelo ocupe el mismo lugar que el módulo en la mesa
     const caja = new T.Box3().setFromObject(m), tam = caja.getSize(new T.Vector3()), ctr = caja.getCenter(new T.Vector3());
@@ -7723,6 +7853,15 @@ function mcuSVG(p) {
       <text class="mcu-title" x="${x0 + 9 * P}" y="${y0 + 7.4 * P}">UNO</text><text class="mcu-sub" x="${x0 + 9.1 * P}" y="${y0 + 8.6 * P}">ARDUINO</text>
       <circle class="mcu-led${on && lv[13] > 0.05 ? ' on' : ''}" data-l="13" cx="${x0 + 14 * P}" cy="${y0 + 3.4 * P}" r="3.2"/><text class="mcu-sub" x="${x0 + 14.6 * P}" y="${y0 + 3.7 * P}">L</text>
       <circle class="mcu-pwr on" cx="${x0 + 24 * P}" cy="${y0 + 6 * P}" r="3"/><text class="mcu-sub" x="${x0 + 24.6 * P}" y="${y0 + 6.3 * P}">ON</text>`;
+  } else if (p.k !== 'ESP32') {
+    // v13: dibujo sencillo para la Nano y la ESP32 de 38 pines (USB a la izquierda)
+    const uno = d.board === 'uno';
+    body = `<rect x="${x0}" y="${y0}" width="${W}" height="${H}" rx="5" fill="${d.color}"/>
+      <rect x="${x0 - 8}" y="${y0 + H / 2 - 1.2 * P}" width="${2.4 * P}" height="${2.4 * P}" rx="2" fill="#c3c8d0"/>
+      ${uno ? `<rect x="${x0 + 6.5 * P}" y="${y0 + 2 * P}" width="${3 * P}" height="${3 * P}" rx="2" transform="rotate(45 ${x0 + 8 * P} ${y0 + 3.5 * P})" fill="#16171b"/>`
+        : `<rect x="${x0 + 13 * P}" y="${y0 + 2.4 * P}" width="${8 * P}" height="${6.2 * P}" rx="2" fill="#b8bec8"/><text class="mcu-chip" x="${x0 + 17 * P}" y="${y0 + 5.8 * P}" text-anchor="middle" fill="#333">ESP32-WROOM</text>`}
+      <text class="mcu-title" x="${x0 + (uno ? 11.5 : 3.2) * P}" y="${y0 + H / 2 + 5}" style="font-size:13px">${esc(d.short || d.name)}</text>
+      <circle class="mcu-led${uno ? '' : ' blue'}${on && lv[d.led] > 0.05 ? ' on' : ''}" data-l="${d.led}" cx="${x0 + (uno ? 4 : 10) * P}" cy="${y0 + H / 2 - 1.4 * P}" r="3"/><circle class="mcu-pwr on" cx="${x0 + (uno ? 4 : 10) * P}" cy="${y0 + H / 2 + 1.4 * P}" r="2.6"/>`;
   } else {
     body = `<rect x="${x0}" y="${y0}" width="${W}" height="${H}" rx="5" fill="${d.color}"/>
       <rect x="${x0 - 8}" y="${y0 + 4.3 * P}" width="${2.4 * P}" height="${2.4 * P}" rx="2" fill="#c3c8d0"/>
@@ -7929,8 +8068,8 @@ Object.assign(Proto, {
     const before = this.snapshot();
     if (cur) { this.mcuStop(true); this.parts = this.parts.filter(p => p !== cur && !p.pins.some(h => h.startsWith('M:'))); }
     this.parts.push({ id: 'MCU1', k, pins: [] });
-    if (k === 'ESP32' && /pinMode\(13/.test(this.code)) this.code = MCU_CODE.esp;
-    if (k === 'UNO' && /GPIO 2/.test(this.code)) this.code = MCU_CODE.blink;
+    if (MCU_DEFS[k].board === 'esp32' && /pinMode\(13/.test(this.code)) this.code = MCU_CODE.esp;
+    if (MCU_DEFS[k].board === 'uno' && /GPIO 2/.test(this.code)) this.code = MCU_CODE.blink;
     this.selected = 'MCU1'; this.commit(before); this.changed(); this.renderMcuPanel();
     if (window.Proto3D) Proto3D.needFit = true;
     toast(MCU_DEFS[k].name + ' colocado. Une sus pines con cables (toca un pin del cabezal y luego un hueco).', 'ok', 4500);
@@ -8067,7 +8206,7 @@ Object.assign(Proto, {
     return changed;
   },
   mcuCtx() {
-    const R = this.mcuRT, esp = PB_MCU_K === 'ESP32', ow = Object.values(R.devs || {}).find(d => d.cls === 'OneWire');
+    const R = this.mcuRT, esp = !!PB_MCU_K && MCU_DEFS[PB_MCU_K].board === 'esp32', ow = Object.values(R.devs || {}).find(d => d.cls === 'OneWire');
     return { sda: esp ? 21 : 18, scl: esp ? 22 : 19, sck: esp ? 18 : 13, mosi: esp ? 23 : 11, miso: esp ? 19 : 12, pulsePin: R.pulsePin, oneWirePin: ow && ow.args ? ow.args[0] : null, lastTonePin: R.lastTonePin };
   },
   mcuHole(num) { const D = MCU_DEFS[PB_MCU_K]; if (!D) return null; const q = D.pins.find(q => q.num === +num && q.kind === 'io' && q.grp === q.id); return q ? 'M:' + q.id : null; },

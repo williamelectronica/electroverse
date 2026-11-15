@@ -655,6 +655,7 @@
 
   /* ----- Registrar las recetas y el constructor genérico ----- */
   Object.keys(ESPECS).forEach(id => { M[id] = (F, c, V) => modulo(F, c, V, ESPECS[id]); });
+  V3.especs = ESPECS;   // la protoboard usa estas recetas para saber tamaño, color y pines de cada módulo
   M['*'] = (F, c, V) => {
     // Módulo genérico: una PCB con un pin por cada pin de los datos
     const etiquetas = c.pines.slice(0, 12).map(p => ({ n: p.nombre.split(/[ ,(/]/)[0], t: p.tipo, f: p.funcion }));
