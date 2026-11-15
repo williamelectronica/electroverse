@@ -653,6 +653,53 @@
     return r;
   };
 
+  /* =====================================================================
+     Módulos que solo existen en la protoboard (no tienen ficha en la Biblioteca)
+     ===================================================================== */
+  const LM393 = (extra, titulo) => [['trimmer', 2, -1, {}], ['soic', -6, 3, { texto: 'LM393', n: 'Comparador LM393', f: 'Compara la señal con el umbral del potenciómetro' }], ['led', -6, -4, { color: '#ff3b30', on: true, menor: true, n: 'LED de encendido', f: 'Hay energía' }], ['led', -2, -4.5, { color: '#3dff6a', menor: true, n: 'LED de salida', f: 'Se enciende cuando la salida DO se activa' }]].concat(extra);
+  const ESPECS_PB = {
+    'pb-zumbador-pasivo': { w: 19, d: 15.5, color: NEGRO, titulo: 'KY-006', tituloPos: [5, 5.5], tituloAlto: 1.1, pines: ['S', '+', { n: '−', t: 'GND' }], piezas: [['cil', -1.5, -1.5, { r: 5.8, h: 7, color: '#141518', n: 'Zumbador pasivo', f: 'Vibra a la frecuencia que le envía tone(): así toca notas' }], ['cil', -1.5, -1.5, { r: 0.8, h: 0.1, color: '#000', y: 7, menor: true, n: 'Orificio', f: 'Por aquí sale el sonido' }]] },
+    'pb-bme280': { w: 15, d: 13.5, color: MORADO, titulo: 'BME280', tituloPos: [2, -3.5], tituloAlto: 1.1, pines: ['VIN', 'GND', 'SCL', 'SDA'], piezas: [['caja', -3.5, -2.5, { w: 2.5, h: 0.95, d: 2.5, metal: true, n: 'Sensor BME280', f: 'Mide temperatura, humedad y presión en un chip de 2,5 mm' }], ['sot23', 3.5, -2.5, { n: 'Regulador de 3,3 V', f: 'Permite alimentarlo con 5 V' }], ['smd', 0, 1.5]] },
+    'pb-hx711': { w: 56, d: 16, color: '#14161a', serigrafia: false, piezas: [
+      ['caja', -9, 0, { w: 38, h: 12.7, d: 12.7, metal: true, radio: 0.6, n: 'Celda de carga (barra de aluminio)', f: 'Se dobla un poquito con el peso; sus galgas cambian de resistencia' }],
+      ['caja', -9, 0, { w: 12, h: 0.4, d: 8, color: '#f2f2ee', y: 12.7, menor: true, n: 'Galga extensiométrica', f: 'Resistencia que cambia al estirarse' }],
+      ['caja', 19, 0, { w: 18, h: 1.6, d: 15, color: '#1b6a3c', n: 'Placa HX711', f: 'Amplifica la señal de la celda y la convierte a números (24 bits)' }],
+      ['soic', 19, 0, { pines: 16, texto: 'HX711', y: 1.6, n: 'Chip HX711', f: 'Convertidor analógico-digital de alta precisión' }]] },
+    'pb-ldr': { w: 32, d: 14, titulo: 'LDR', tituloPos: [-3, -5], pines: ['VCC', 'GND', 'DO', 'AO'], lado: 'oeste', piezas: LM393([['cil', 12, 0, { r: 2.6, h: 1.8, color: '#d07a3c', n: 'Fotorresistencia LDR', f: 'Con más luz conduce mejor' }]]) },
+    'pb-suelo': { w: 32, d: 16, titulo: 'SUELO', tituloPos: [-3, -5.5], lado: 'oeste', pines: ['VCC', 'GND', 'DO', 'AO'], lado2: 'este', pines2: ['+', { n: '−', t: 'GND' }], piezas: LM393([]) },
+    'pb-llama': { w: 32, d: 14, titulo: 'LLAMA', tituloPos: [-3, -5], lado: 'oeste', pines: ['VCC', 'GND', 'DO', 'AO'], piezas: LM393([['led5', 12, 0, { color: '#14161a', opacidad: 0.95, horizontal: true, r: 2.5, h: 4, y: 2.5, chip: false, n: 'Receptor infrarrojo de llama', f: 'Detecta la luz infrarroja de 760 a 1100 nm que emite el fuego' }]]) },
+    'pb-hall': { w: 19, d: 15.5, color: NEGRO, titulo: 'KY-003', tituloPos: [5, 5.5], tituloAlto: 1.1, pines: ['S', '+', { n: '−', t: 'GND' }], piezas: [['caja', -2, -3, { w: 4, h: 1.5, d: 3, color: '#141518', texto: '3144', n: 'Sensor de efecto Hall A3144', f: 'Cambia su salida cuando se le acerca un imán' }], ['led', 4, -3, { color: '#ff3b30', menor: true, n: 'LED', f: 'Se enciende al detectar el imán' }], ['smd', 4, 1]] },
+    'pb-inclinacion': { w: 25, d: 13, titulo: 'SW-520D', tituloPos: [-2, -4.5], tituloAlto: 1.1, lado: 'oeste', pines: ['VCC', 'GND', 'DO'], piezas: [['cil', 7, 0, { r: 2.5, h: 9, metal: true, horizontal: true, y: 2.5, n: 'Interruptor de inclinación', f: 'Dentro hay dos bolitas que unen los contactos según la posición' }], ['soic', -4, 2.5, { texto: 'LM393', n: 'Comparador', f: 'Limpia la señal del interruptor' }], ['led', -4, -3.5, { color: '#3dff6a', menor: true, n: 'LED', f: 'Indica la posición' }]] },
+    'pb-pulsador': { w: 19, d: 15.5, color: NEGRO, titulo: 'KY-004', tituloPos: [5, 5.5], tituloAlto: 1.1, pines: ['S', '+', { n: '−', t: 'GND' }], piezas: [['boton', -1, -2, { lado: 6 }], ['smd', 5, -2]] },
+    'pb-acs712': { w: 31, d: 19, color: ROJO, titulo: 'ACS712 5A', tituloPos: [-3, -7], tituloAlto: 1.1, lado: 'oeste', pines: ['VCC', 'OUT', 'GND'], piezas: [['soic', -1, 0, { texto: 'ACS712', n: 'Sensor de corriente ACS712', f: 'Mide la corriente por el campo magnético que crea, sin tocar el circuito' }], ['bornera', 11, 0, { cant: 2, ry: Math.PI / 2, n: 'Bornera IP+ / IP−', f: 'Por aquí pasa la corriente que se quiere medir' }], ['led', -8, 5, { color: '#ff3b30', on: true, menor: true, n: 'LED', f: 'Hay energía' }]] },
+    'pb-sensor-voltaje': { w: 25, d: 17, color: ROJO, titulo: '0–25 V', tituloPos: [-3, -6], tituloAlto: 1.2, lado: 'oeste', pines: ['S', '+', { n: '−', t: 'GND' }], piezas: [['bornera', 7, 0, { cant: 2, ry: Math.PI / 2, n: 'Bornera VCC / GND', f: 'Aquí se conecta el voltaje a medir (hasta 25 V)' }], ['smd', -3, -2, { n: 'Resistencia de 30 kΩ', f: 'Parte del divisor de voltaje (divide entre 5)' }], ['smd', -3, 2, { n: 'Resistencia de 7,5 kΩ', f: 'Parte del divisor de voltaje' }]] }
+  };
+  Object.keys(ESPECS_PB).forEach(id => { M[id] = (F, c, V) => modulo(F, c, V, ESPECS_PB[id]); });
+  // Piezas sin placa
+  M['pb-ds18-sonda'] = (F, c, V) => {
+    const g = new V.T.Group();
+    g.add(F.info(F.pon(F.cil(3, 3, 30, F.M.aluminio()), 10, 3, 0, 0, 0, Math.PI / 2), 'Sonda de acero inoxidable', 'Dentro está el DS18B20; se puede sumergir en agua'));
+    g.add(F.info(F.pon(F.cil(2.2, 2.2, 4, F.M.negro()), -7, 3, 0, 0, 0, Math.PI / 2), 'Funda del cable', 'Protege la unión del cable con la sonda', { menor: true }));
+    g.add(F.info(F.cable([[-9, 3, 0], [-16, 2.5, 0], [-22, 2, 0], [-28, 1.8, 0]], '#141518', 1.3), 'Cable', 'Lleva los 3 hilos hasta los pines', { menor: true }));
+    ['#d32f2f', '#f2c200', '#1d1d1f'].forEach((col, i) => g.add(F.cable([[-28, 1.8, (i - 1) * 0.8], [-33, 1.2, (i - 1) * 2.54], [-36, 1, (i - 1) * 2.54]], col, 0.45)));
+    g.userData.yPcb = 0; return g;
+  };
+  M['pb-final-carrera'] = (F, c, V) => {
+    const g = new V.T.Group();
+    g.add(F.info(F.pon(F.caja(20, 10, 6.4, F.M.negro(), 0.5), 0, 5, 0), 'Microinterruptor', 'Al presionar la palanca, el contacto C se une con NO'));
+    g.add(F.pon(F.caja(3, 1.2, 3, F.M.plastico('#d32f2f', 0.4)), 4, 10.6, 0));
+    g.add(F.info(F.pon(F.caja(20, 0.4, 4, F.M.aluminio()), 1, 12, 0, 0, 0, -0.18), 'Palanca metálica', 'Se empuja cuando algo llega al final del recorrido'));
+    [-6, 0, 6].forEach(x => g.add(F.pon(F.caja(1.2, 4, 3, F.mat({ color: '#d9ab45', metalness: 0.9, roughness: 0.3 })), x, -1, 0)));
+    g.userData.yPcb = 0; return g;
+  };
+  M['pb-reed-puerta'] = (F, c, V) => {
+    const g = new V.T.Group(), blanco = F.M.plastico('#f1f1ee', 0.45);
+    g.add(F.info(F.pon(F.caja(26, 9, 13, blanco, 1.5), -8, 4.5, 0), 'Sensor (con el interruptor reed)', 'Dentro hay dos láminas que se juntan cuando el imán está cerca'));
+    g.add(F.info(F.pon(F.caja(26, 9, 13, blanco, 1.5), 22, 4.5, 0), 'Imán', 'Se pone en la puerta; al abrirla se aleja del sensor'));
+    g.add(F.cable([[-21, 4, 2], [-27, 3, 2], [-32, 2, 2]], '#e9e9ee', 0.6)); g.add(F.cable([[-21, 4, -2], [-27, 3, -2], [-32, 2, -2]], '#e9e9ee', 0.6));
+    g.userData.yPcb = 0; return g;
+  };
+
   /* ----- Registrar las recetas y el constructor genérico ----- */
   Object.keys(ESPECS).forEach(id => { M[id] = (F, c, V) => modulo(F, c, V, ESPECS[id]); });
   V3.especs = ESPECS;   // la protoboard usa estas recetas para saber tamaño, color y pines de cada módulo

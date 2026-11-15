@@ -1248,7 +1248,7 @@ onmessage = async (ev) => {
 <script src="data/componentes.js?v=13.0.3"></script>
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
 <script src="js/visor3d.js?v=13.0.3"></script>
-<script src="js/modelos3d.js?v=13.0.3"></script>
+<script src="js/modelos3d.js?v=13.0.7"></script>
 <script src="js/realistas3d.js?v=13.0.6"></script>
 <script>
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
@@ -7433,7 +7433,9 @@ const Proto3D = Object.assign(Object.create(View3D), {
      - Los pines se dibujan exactamente donde la protoboard conecta los cables
      - Se guardan en memoria (caché) para no reconstruirlos en cada cambio del montaje
      ===================================================================== */
-  BIB_DE_MOD: { LCD: 'lcd-16x2-i2c', OLED: 'oled-ssd1306', SERVO: 'servo-sg90', RELAY: 'rele-1', US: 'hc-sr04', DHT: 'dht11', RFID: 'rfid-rc522', MQ2: 'mq-2', MQ135: 'mq-135', SOUND: 'ky-038', JOY: 'joystick-ky-023', PIR: 'pir-hc-sr501', IROBS: 'ir-obstaculos' },
+  BIB_DE_MOD: { LCD: 'lcd-16x2-i2c', OLED: 'oled-ssd1306', SERVO: 'servo-sg90', RELAY: 'rele-1', US: 'hc-sr04', DHT: 'dht11', RFID: 'rfid-rc522', MQ2: 'mq-2', MQ135: 'mq-135', SOUND: 'ky-038', JOY: 'joystick-ky-023', PIR: 'pir-hc-sr501', IROBS: 'ir-obstaculos',
+    // módulos que solo existen en la protoboard (sus modelos están en js/modelos3d.js con el prefijo "pb-")
+    BZP: 'pb-zumbador-pasivo', BME: 'pb-bme280', HX: 'pb-hx711', LDRM: 'pb-ldr', SOIL: 'pb-suelo', FLAME: 'pb-llama', HALL: 'pb-hall', TILT: 'pb-inclinacion', KEY: 'pb-pulsador', ACS: 'pb-acs712', VSEN: 'pb-sensor-voltaje', DS18: 'pb-ds18-sonda', LIMIT: 'pb-final-carrera', REED: 'pb-reed-puerta' },
   altaCache: {},
   altaV() {
     if (this._altaV !== undefined) return this._altaV;
@@ -7443,7 +7445,9 @@ const Proto3D = Object.assign(Object.create(View3D), {
     return this._altaV;
   },
   modeloBib(id, quitarCables) {
-    const V = this.altaV(), c = V && EV_DATA.buscar(id); if (!c) return null;
+    const V = this.altaV(); if (!V) return null;
+    // los módulos propios de la protoboard ("pb-…") no tienen ficha en la Biblioteca: usamos una ficha mínima
+    const c = EV_DATA.buscar(id) || (Visor3D.modelos[id] ? { id, nombre: id, pines: [], categoria: 'sensor', descripcion: '' } : null); if (!c) return null;
     const fn = Visor3D.modelos[id] || Visor3D.modelos['*' + c.categoria] || Visor3D.modelos['*'];
     const m = fn(V.F, c, V);
     // Sus cabeceras y serigrafía se reemplazan por las de la protoboard (los cables llegan a esos pines)
