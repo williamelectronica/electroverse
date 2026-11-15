@@ -3758,6 +3758,7 @@ VIEWS.lab = {
           <button class="tool" id="b-rot" title="Girar el componente seleccionado (R)">${ic('reset')}<span class="tl">Girar</span></button>
           <button class="tool" id="b-undo" title="Deshacer (Ctrl+Z)" aria-label="Deshacer">${ic('undo')}</button>
           <button class="tool" id="b-redo" title="Rehacer (Ctrl+Y)" aria-label="Rehacer">${ic('redo')}</button>
+          <button class="tool" id="b-nuevo" title="Circuito nuevo: empieza con el lienzo vacío (se puede deshacer)">${ic('plus')}<span class="tl">Nuevo</span></button>
           <button class="tool" id="b-save" title="Guardar el circuito">${ic('save')}<span class="tl">Guardar</span></button>
           <span class="tsep"></span>
           <span class="row lab-run" id="runbtns"></span>
@@ -3866,6 +3867,19 @@ VIEWS.lab = {
     L.onLuz = () => { L.colorsDirty = true; L.updateLive(); }; window.addEventListener('ev-luz', L.onLuz);
     $$('.tool[data-tool]').forEach(b => b.onclick = () => L.setTool(b.dataset.tool));
     $('#b-undo').onclick = () => L.undo(); $('#b-redo').onclick = () => L.redo();
+    // v13: circuito nuevo (vacía el lienzo; Ctrl+Z lo recupera)
+    $('#b-nuevo').onclick = () => {
+      if (!L.parts.length) { toast('El lienzo ya está vacío.', '', 2500); return; }
+      if (!confirm('¿Empezar un circuito nuevo?\nSe quitarán todos los componentes y cables.\nPodrás recuperarlo con Deshacer (Ctrl+Z).')) return;
+      if (L.running) L.stop(true);
+      L._before = L.snapshot();
+      L.parts = []; L.probes = {}; L.selected = null; L.pending = null; L.dmmTarget = null; L.events = []; L.samples = [];
+      L.title = 'Circuito nuevo'; L.note = 'Elige componentes en la barra de la izquierda y únelos con cables.';
+      L.commit(); L.structural(); L.renderSide && L.renderSide();
+      $('#lab-note').textContent = L.title + '. ' + L.note;
+      EsqZoom.ajustar(true);
+      toast('Circuito nuevo listo.', 'ok', 2500);
+    };
     $$('#dmm-mode button').forEach(b => b.onclick = () => { L.dmmMode = b.dataset.m; L.renderDmm(); });
     $('#tdiv').onchange = e => { L.tdiv = +e.target.value; L.samples = []; L.persist(); L.drawScope(); L.renderClock(); };
     $('#vdiv').value = String(L.vdiv); $('#vdiv').onchange = e => { L.vdiv = e.target.value === 'auto' ? 'auto' : +e.target.value; L.drawScope(); };
@@ -6654,6 +6668,7 @@ VIEWS.proto = {
           <button class="tool pb-tip-ch1" data-pbtool="ch1" title="Canal 1 del osciloscopio">${ic('scope')}<span class="tl">CH1</span></button>
           <button class="tool pb-tip-ch2" data-pbtool="ch2" title="Canal 2 del osciloscopio">${ic('scope')}<span class="tl">CH2</span></button>
           <span class="tsep"></span>
+          <button class="tool" id="pb-nuevo" title="Montaje nuevo: empieza con la protoboard vacía (se puede deshacer)">${ic('plus')}<span class="tl">Nuevo</span></button>
           <button class="tool" id="pb-rot" title="Girar (R)">${ic('reset')}<span class="tl">Girar</span></button>
           <button class="tool" id="pb-undo" title="Deshacer (Ctrl+Z)" aria-label="Deshacer">${ic('undo')}</button>
           <button class="tool" id="pb-redo" title="Rehacer (Ctrl+Y)" aria-label="Rehacer">${ic('redo')}</button>
@@ -6783,6 +6798,15 @@ VIEWS.proto = {
     $('#pb-rot').onclick = () => R.rotate();
     $('#pb-addb').onclick = () => R.addBoard(); $('#pb-delb').onclick = () => R.removeBoard();
     $('#pb-undo').onclick = () => R.undo(); $('#pb-redo').onclick = () => R.redo();
+    // v13: montaje nuevo (vacía la mesa; Ctrl+Z lo recupera)
+    $('#pb-nuevo').onclick = () => {
+      if (!R.parts.length) { toast('La protoboard ya está vacía.', '', 2500); return; }
+      if (!confirm('¿Empezar un montaje nuevo?\nSe quitarán todos los componentes, cables y la placa.\nPodrás recuperarlo con Deshacer (Ctrl+Z).')) return;
+      const before = R.snapshot(); R.mcuStop(true);
+      R.parts = []; R.probes = {}; R.selected = null;
+      R.commit(before); R.changed();
+      toast('Montaje nuevo listo. Elige componentes en la bandeja de la izquierda.', 'ok', 3500);
+    };
     const runBtn = () => { $('#pb-run').innerHTML = ic(R.running ? 'pause' : 'play') + `<span class="tl">${R.running ? 'Pausar' : 'Reanudar'}</span>`; };
     $('#pb-run').onclick = () => { R.running = !R.running; runBtn(); }; runBtn();
     $('#pb-ex').onchange = e => { if (e.target.value) { R.load(e.target.value); e.target.value = ''; } };
