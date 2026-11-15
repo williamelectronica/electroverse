@@ -267,6 +267,62 @@
     g.userData.mid = M;
   };
 
+  /* ===================== CAPACITOR ELECTROLÍTICO ===================== */
+  const uF = v => { const u = (+v || 0) * 1e6; return (u >= 1 ? +u.toPrecision(3) : +u.toPrecision(2)) + 'µF'; };
+  R.CE = (pb, g, p, c) => {
+    const THREE = T(), M = c.A.clone().add(c.B).multiplyScalar(0.5), r = 1.0, H = 2.7, y0 = 0.5;
+    pb.roundLegs(g, [c.A, c.B], pb.legTargets(c.A, c.B, M, y0, 0.45));
+    const funda = propio({ map: tex(2 * Math.PI * r, H, (k, w, h) => {
+      k.fillStyle = c.burned ? '#2a221e' : '#1d3f9a'; k.fillRect(0, 0, w, h);
+      k.fillStyle = '#dfe4ee'; k.fillRect(w * 0.06, 0, w * 0.16, h);
+      for (let y = h * 0.12; y < h; y += h * 0.22) texto(k, '−', w * 0.14, y, h * 0.16, '#1d3f9a', { peso: 900 });
+      texto(k, uF(p.v), w * 0.55, h * 0.36, h * 0.15, '#ffffff', { peso: 800, rot: -Math.PI / 2 });
+      texto(k, '25V', w * 0.68, h * 0.36, h * 0.13, '#ffffff', { peso: 700, rot: -Math.PI / 2 });
+      texto(k, '105°C', w * 0.8, h * 0.4, h * 0.1, '#c9d4f2', { peso: 600, rot: -Math.PI / 2 });
+    }), roughness: 0.3 });
+    const lata = malla(new THREE.CylinderGeometry(r, r, H, 40, 1, true), funda, true);
+    // orienta la franja del negativo hacia la pata B (la pata −)
+    lata.rotation.y = Math.atan2(c.B.x - c.A.x, c.B.z - c.A.z) + Math.PI * 0.35;
+    lata.position.copy(M).setY(y0 + H / 2); g.add(lata);
+    const tapa = malla(new THREE.CylinderGeometry(r * 0.94, r * 0.94, 0.06, 40), pb.mat('alu', { color: 0xc3c9d4, metalness: 0.8, roughness: 0.3 })); tapa.position.copy(M).setY(y0 + H - 0.04); g.add(tapa);
+    const cruz = plano(r * 1.6, r * 1.6, propio({ map: tex(1.6, 1.6, (k, w, h) => { k.strokeStyle = '#7d838d'; k.lineWidth = 0.06; k.beginPath(); k.moveTo(w * 0.2, h / 2); k.lineTo(w * 0.8, h / 2); k.moveTo(w / 2, h * 0.2); k.lineTo(w / 2, h * 0.8); k.moveTo(w * 0.3, h * 0.3); k.lineTo(w * 0.7, h * 0.7); k.stroke(); }), transparent: true }));
+    cruz.rotation.x = -Math.PI / 2; cruz.position.copy(M).setY(y0 + H + 0.001); g.add(cruz);
+    const borde = malla(new THREE.TorusGeometry(r - 0.03, 0.05, 6, 40), pb.mat('alu', { color: 0xc3c9d4, metalness: 0.8, roughness: 0.3 })); borde.rotation.x = Math.PI / 2; borde.position.copy(M).setY(y0 + H - 0.02); g.add(borde);
+    const goma = malla(new THREE.CylinderGeometry(r * 0.96, r * 0.96, 0.12, 30), negro(pb)); goma.position.copy(M).setY(y0 + 0.05); g.add(goma);
+    g.userData.mid = M;
+  };
+
+  /* ===================== CAPACITOR CERÁMICO ===================== */
+  const codigoCeramico = v => { const pf = Math.round((+v || 0) * 1e12); if (pf < 100) return String(pf); const e = Math.floor(Math.log10(pf)) - 1; return String(Math.round(pf / Math.pow(10, e))).slice(0, 2) + e; };
+  R.CC = (pb, g, p, c) => {
+    const THREE = T(), M = c.A.clone().add(c.B).multiplyScalar(0.5), y = 1.5, ang = Math.atan2(c.B.z - c.A.z, c.B.x - c.A.x);
+    pb.roundLegs(g, [c.A, c.B], pb.legTargets(c.A, c.B, M, y - 0.55, 0.35));
+    const disco = new THREE.Group(); disco.position.copy(M).setY(y); disco.rotation.y = -ang; g.add(disco);
+    const cuerpo = malla(new THREE.SphereGeometry(0.85, 32, 16), pb.mat('r_ceramico', { color: 0xc4772a, roughness: 0.55 })); cuerpo.scale.set(1, 1, 0.32); disco.add(cuerpo);
+    const etq = plano(1.2, 0.8, propio({ map: tex(1.2, 0.8, (k, w, h) => texto(k, codigoCeramico(p.v), w / 2, h / 2, h * 0.55, '#2b1606', { peso: 900 })), transparent: true }));
+    etq.position.set(0, 0.05, 0.28); disco.add(etq);
+    g.userData.mid = M;
+  };
+
+  /* ===================== CIRCUITOS INTEGRADOS (DIP) ===================== */
+  R._IC = (pb, g, p, c) => {
+    const THREE = T(), cc = c.center(), n = c.P.length, largo = n / 2 + 0.2, y0 = 0.5, H = 0.95;
+    const horiz = Math.abs(c.P[0].z - c.P[n - 1].z) > Math.abs(c.P[0].x - c.P[n - 1].x);   // filas a lo largo de X
+    const entreFilas = horiz ? Math.abs(c.P[0].z - c.P[n - 1].z) : Math.abs(c.P[0].x - c.P[n - 1].x), ancho = Math.max(1.3, entreFilas - 0.45);
+    pb.pinLegs(g, c.P, 0.95, cc);
+    const grupo = new THREE.Group(); grupo.position.copy(cc); if (!horiz) grupo.rotation.y = Math.PI / 2; g.add(grupo);
+    const cuerpo = malla(cajaRedonda(largo, H, ancho, 0.12), c.burned ? pb.mat('charred', { color: 0x2a221e, roughness: 1 }) : pb.mat('r_epoxi', { color: 0x1a1b1f, roughness: 0.45 })); cuerpo.position.y = y0; grupo.add(cuerpo);
+    const nombre = (typeof IC_DEFS !== 'undefined' && IC_DEFS[p.k] && IC_DEFS[p.k].name) || p.k;
+    const top = plano(largo - 0.3, ancho - 0.3, propio({ map: tex(largo - 0.3, ancho - 0.3, (k, w, h) => {
+      texto(k, nombre, w / 2 + 0.2, h * 0.42, Math.min(h * 0.32, w / nombre.length * 1.5), '#d9dee8', { peso: 800 });
+      texto(k, 'EV 2026 · PERÚ', w / 2 + 0.2, h * 0.75, h * 0.14, '#8d939c', { peso: 600 });
+      k.fillStyle = '#0a0b0d'; k.beginPath(); k.arc(0.35, h - 0.35, 0.15, 0, 7); k.fill();
+    }), transparent: true, roughness: 0.5 }));
+    top.rotation.x = -Math.PI / 2; top.position.y = y0 + H + 0.004; grupo.add(top);
+    const muesca = malla(new THREE.CylinderGeometry(0.32, 0.32, 0.1, 20, 1, false, 0, Math.PI), pb.mat('notch', { color: 0x0b0c0e })); muesca.rotation.y = Math.PI / 2; muesca.position.set(-largo / 2, y0 + H - 0.03, 0); grupo.add(muesca);
+    g.userData.mid = cc; g.userData.body = cuerpo;
+  };
+
   window.PB_REAL = R;
   window.PB_REAL_AYUDA = { tex, propio, malla, texto, cajaRedonda, plano, cable, metal, negro };
 })();

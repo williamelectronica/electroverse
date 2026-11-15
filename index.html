@@ -1249,7 +1249,7 @@ onmessage = async (ev) => {
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
 <script src="js/visor3d.js?v=13.0.3"></script>
 <script src="js/modelos3d.js?v=13.0.3"></script>
-<script src="js/realistas3d.js?v=13.0.5"></script>
+<script src="js/realistas3d.js?v=13.0.6"></script>
 <script>
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
 (function (root) {
@@ -7266,8 +7266,9 @@ const Proto3D = Object.assign(Object.create(View3D), {
     g.userData.mid = center();
     if (MOD_DEFS[p.k]) return this.buildMod(p, g);
     // v13: piezas con modelo realista (js/realistas3d.js); si algo falla se usa el modelo anterior
-    if (window.PB_REAL && PB_REAL[p.k]) {
-      try { PB_REAL[p.k](this, g, p, { A, B, P, burned, center }); if (burned) this.addSmoke(g, g.userData.mid.clone().setY(2.2)); return g; }
+    const fnReal = window.PB_REAL && (PB_REAL[p.k] || (IC_DEFS[p.k] && PB_REAL._IC));
+    if (fnReal) {
+      try { fnReal(this, g, p, { A, B, P, burned, center }); if (burned) this.addSmoke(g, g.userData.mid.clone().setY(2.2)); return g; }
       catch (e) { console.error('modelo realista', p.k, e); this.disposeGroup(g); g.clear(); g.userData.leads = null; }
     }
     switch (p.k) {
