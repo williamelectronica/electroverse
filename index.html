@@ -681,7 +681,7 @@ textarea.input.pb-code { height: 260px; min-height: 160px; }
 :root[data-luz="dia"] .lab-studio .board-wrap { background: #f2f5fc; --fg: #0c1330; --muted: #48557a; --faint: #6d7898; --grid-dot: rgba(60, 80, 150, .3); --v-neu: #8590ad; --v-pos: #3f8f00; --v-neg: #c0157a; --glass-solid: #ffffff; --glass-2: rgba(255, 255, 255, .6); --cyan: #007f9e; --amber: #a35f00; --lime: #3f7d00; --magenta: #c0157a; --bad: #c8203f; }
 :root[data-luz="noche"] .lab-studio .board-wrap { background: #000; --fg: #a9b3cf; --muted: #6a7696; --grid-dot: rgba(140, 170, 255, .12); --v-neu: #4c5676; }
 :root[data-luz="noche"] #board .part .seg.on, :root[data-luz="noche"] #board .part .probe-led.on { filter: drop-shadow(0 0 9px currentColor) drop-shadow(0 0 4px #fff8); }
-@media (max-width: 720px) { .lab-studio #board { min-width: 620px; height: auto; } .lab-studio .board-wrap { place-items: start; } .lab-studio .lib { left: 50px; top: 50px; width: calc(100vw - 100px); max-height: 62%; } }
+@media (max-width: 720px) { .lab-studio .lib { left: 50px; top: 50px; width: calc(100vw - 100px); max-height: 62%; } }
 
 /* ---------- v13 · Biblioteca de componentes (datos en data/componentes.js) ---------- */
 .bib { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -734,6 +734,73 @@ textarea.input.pb-code { height: 260px; min-height: 160px; }
   .bib-volver { display: inline-flex; }
 }
 @media print { .bib-lista, .rail, .topbar, .bib-acciones, .v3b-barra { display: none !important; } }
+
+/* ---------- v13 · Esquemas con zoom profesional ---------- */
+.lab-studio .board-wrap { overflow: hidden; display: block; }
+.lab-studio #board, .lab-studio #board[viewBox] { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; touch-action: none; }
+.lab-studio #board.paneando { cursor: grabbing; }
+.esq-zoom { position: absolute; right: 10px; bottom: 10px; z-index: 5; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(8, 13, 24, .9); border: 1px solid #24405a; box-shadow: 0 6px 18px #0008; }
+.esq-zoom button { min-width: 34px; height: 32px; padding: 0 9px; border: 0; border-radius: 7px; background: transparent; color: #e8ecf5; font: 700 .8rem var(--f-mono); cursor: pointer; }
+.esq-zoom button:hover, .esq-zoom button:focus-visible { background: #16314a; outline: none; }
+.esq-pct { min-width: 54px; text-align: center; font: 700 .78rem var(--f-mono); color: #22e5ff; font-variant-numeric: tabular-nums; }
+.esq-acc { position: absolute; top: 10px; right: 10px; z-index: 5; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: calc(100% - 20px); }
+.esq-acc .btn { background: rgba(8, 13, 24, .88); color: #e8ecf5; border-color: #24405a; }
+.esq-acc .btn[aria-pressed="true"] { border-color: #22e5ff; color: #22e5ff; box-shadow: 0 0 0 1px #22e5ff inset; }
+.esq-exp { position: relative; }
+.esq-menu { position: absolute; right: 0; top: calc(100% + 4px); display: flex; flex-direction: column; min-width: 230px; padding: 4px; border-radius: 10px; background: #0b1424; border: 1px solid #24405a; box-shadow: 0 10px 28px #000a; }
+.esq-menu[hidden] { display: none; }
+.esq-menu button { text-align: left; padding: 8px 10px; border: 0; border-radius: 7px; background: none; color: #e8ecf5; cursor: pointer; font-size: .84rem; }
+.esq-menu button:hover { background: #16314a; }
+.esq-mini { position: absolute; left: 10px; bottom: 10px; z-index: 5; width: 180px; height: auto; border-radius: 8px; background: rgba(8, 13, 24, .88); border: 1px solid #24405a; cursor: pointer; touch-action: none; box-shadow: 0 6px 18px #0008; }
+.esq-mini .mini-fondo { fill: #0d1830; }
+.esq-mini .mini-cable { stroke: #7fa2c8; stroke-width: 7; stroke-linecap: round; }
+.esq-mini .mini-comp { stroke: #e8ecf5; stroke-width: 9; fill: rgba(232, 236, 245, .25); stroke-linecap: round; }
+.esq-mini .mini-vista { fill: rgba(34, 229, 255, .12); stroke: #22e5ff; stroke-width: 10; vector-effect: non-scaling-stroke; }
+.esq-mini .mini-vista { stroke-width: 2; }
+.esq-tip, .esq-red { position: absolute; z-index: 6; max-width: min(340px, calc(100% - 20px)); display: flex; flex-direction: column; gap: 3px; padding: 8px 11px; border-radius: 10px; background: rgba(8, 13, 24, .95); border: 1px solid #22e5ff; color: #e8ecf5; font-size: .82rem; box-shadow: 0 8px 22px #000a; pointer-events: none; }
+.esq-tip span { color: #cfe9ff; } .esq-tip small { color: #8f9bb3; }
+.esq-red { left: 10px; top: 10px; pointer-events: auto; display: block; }
+.esq-tip[hidden], .esq-red[hidden] { display: none; }
+#board .union { stroke: none; }
+#board .etq-pin { display: none; fill: var(--cyan); font: 700 9px var(--f-mono); pointer-events: none; }
+#board.cerca .etq-pin { display: inline; }
+#board.lejos .lbl, #board.lejos .val, #board.lejos .pinlbl { display: none; }
+#board .part.wire[data-clase="GND"] .la, #board .union[data-clase="GND"] { filter: drop-shadow(0 0 1.2px rgba(255, 255, 255, .85)); }
+:root[data-luz="dia"] #board .part.wire[data-clase="GND"] .la, :root[data-luz="dia"] #board .union[data-clase="GND"] { filter: none; }
+#board .part.wire.resaltado .la { stroke-width: 6; filter: drop-shadow(0 0 5px #22e5ff); }
+#board .part.wire.resaltado .jn { r: 5; }
+#board.siguiendo, #board.siguiendo .part, #board.siguiendo .hit { cursor: help; }
+#board.con-red .part:not(.en-red) { opacity: .22; }
+#board.con-red .part.en-red .la, #board.con-red .part.en-red .lb { filter: drop-shadow(0 0 4px #22e5ff); }
+#board .anillo-red { fill: none; stroke: #22e5ff; stroke-width: 2.5; stroke-dasharray: 4 3; pointer-events: none; animation: anilloRed 1.2s linear infinite; }
+@keyframes anilloRed { to { stroke-dashoffset: -14; } }
+.esq-tabla { flex: 0 0 auto; max-height: 38%; display: flex; flex-direction: column; border-top: 1px solid #24405a; background: #070c17; }
+.esq-tabla[hidden] { display: none; }
+.esq-tabla-h { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #1a2a40; }
+.esq-tabla-b { overflow: auto; padding: 4px 12px 12px; }
+.esq-t td, .esq-t th { color: #e8ecf5; }
+.esq-col { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; border: 1px solid #fff6; }
+@media (max-width: 720px) {
+  .esq-mini { width: 110px; left: 6px; bottom: 6px; }
+  .esq-zoom { right: 6px; bottom: 6px; } .esq-zoom button { min-width: 30px; padding: 0 6px; }
+  .esq-zoom [data-ez="cien"] { display: none; }
+  .esq-acc { top: 6px; right: 6px; } .esq-acc .btn { min-height: 30px; padding: 0 8px; font-size: .74rem; }
+}
+/* Impresión del esquema en A4 horizontal */
+#imp-esq { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body.imp-esq { overflow: visible !important; height: auto !important; background: #fff !important; }
+  body.imp-esq::before, body.imp-esq::after { display: none !important; }
+  body.imp-esq > *:not(#imp-esq) { display: none !important; }
+  body.imp-esq #imp-esq { display: block !important; color: #000; font-family: Arial, sans-serif; }
+  #imp-esq h1 { font-size: 16pt; margin: 0 0 4mm; } #imp-esq h2 { font-size: 12pt; margin: 4mm 0 2mm; page-break-before: auto; }
+  #imp-esq .imp-svg svg { width: 100%; height: auto; max-height: 160mm; display: block; }
+  #imp-esq table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  #imp-esq th, #imp-esq td { border: 1px solid #999; padding: 3px 6px; color: #000; text-align: left; }
+  #imp-esq .esq-col { border: 1px solid #555; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #imp-esq .imp-pie { font-size: 8pt; color: #555; margin-top: 3mm; }
+}
 
 /* ---------- v13 · Visor 3D de la Biblioteca ---------- */
 .v3b { position: relative; height: 440px; border-top: 1px solid var(--line); overflow: hidden; border-radius: 0 0 var(--r) var(--r); background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--cyan) 8%, transparent), transparent 70%); }
@@ -3269,6 +3336,7 @@ const Lab = {
     const pc = { probe: ['var(--bad)', 'V+'], ch1: ['var(--amber)', 'CH1'], ch2: ['var(--cyan)', 'CH2'] };
     Object.entries(this.probes).forEach(([k, pt]) => { if (!pt || !pc[k]) return; const [x, y] = px(pt); probes += `<g pointer-events="none"><circle class="probe" cx="${x}" cy="${y}" r="9" stroke="${pc[k][0]}"/><text class="probe-lbl" x="${x + 11}" y="${y - 10}" fill="${pc[k][0]}">${pc[k][1]}</text></g>`; });
     $('#g-probes').innerHTML = probes;
+    EsqZoom.tras();   // v13: redes, puntos de unión, nombres de patas y minimapa
     this.renderOver(); this.updateLive(); this.placeBar();
     if (window.View3D && View3D.active) View3D.sync();
   },
@@ -3330,7 +3398,7 @@ const Lab = {
       const r = res && res[p.id];
       if (p.t === 'W') {
         const v = this.sim ? this.sim.nodeVoltage(p.a) : null;
-        const col = this.vColor(res ? v : null, vmax);
+        const col = EsqZoom.colorCable(p) || this.vColor(res ? v : null, vmax);   // v13: colores estándar (rojo, naranja, negro…)
         g.querySelector('.la').setAttribute('stroke', col);
         g.querySelectorAll('.jn').forEach(j => j.setAttribute('fill', col));
         return;
@@ -3851,12 +3919,450 @@ VIEWS.lab = {
     $('#b-tt').onclick = () => L.showTruth();
     if (!L.perfChecked) { L.perfChecked = true; setTimeout(() => { if (currentView === 'lab') Perf.check('laboratorio'); }, 600); }
     L.applyView(Store.gget('labView', '2d'));
-    L.center = () => { const w = $('#lab-wrap'), g = $('#g-parts'); if (!w || !g || w.scrollWidth <= w.clientWidth + 4) return; const r = g.getBoundingClientRect(), wr = w.getBoundingClientRect(); if (r.width) w.scrollLeft += r.left + r.width / 2 - (wr.left + wr.width / 2); }; // en pantallas angostas el circuito queda a la vista
-    requestAnimationFrame(L.center);
+    EsqZoom.montar();   // v13: zoom, minimapa, lectura de cables y exportación (define L.center = ajustar a pantalla)
     if (L.running) { cancelAnimationFrame(L.raf); L.lastTs = 0; L.raf = requestAnimationFrame(t => L.frame(t)); }
     if (!L.dmmTarget) { const first = L.parts.find(p => p.t === 'D') || L.parts.find(p => p.t === 'R'); if (first) { L.dmmTarget = { kind: 'part', id: first.id }; L.renderDmm(); } }
   },
-  leave() { const L = Lab; document.body.classList.remove('in-studio'); (L.docH || []).forEach(([t, f]) => document.removeEventListener(t, f)); if (L.onLuz) window.removeEventListener('ev-luz', L.onLuz); L.dragging = false; if (L.running) { L.pause(); L.paused = true; } document.removeEventListener('keydown', L.keyh); if (L.release) { document.removeEventListener('pointerup', L.release); document.removeEventListener('pointercancel', L.release); } if (L.ro) L.ro.disconnect(); View3D.unmount(); }
+  leave() { const L = Lab; EsqZoom.desmontar(); document.body.classList.remove('in-studio'); (L.docH || []).forEach(([t, f]) => document.removeEventListener(t, f)); if (L.onLuz) window.removeEventListener('ev-luz', L.onLuz); L.dragging = false; if (L.running) { L.pause(); L.paused = true; } document.removeEventListener('keydown', L.keyh); if (L.release) { document.removeEventListener('pointerup', L.release); document.removeEventListener('pointercancel', L.release); } if (L.ro) L.ro.disconnect(); View3D.unmount(); }
+};
+
+/* =====================================================================
+   v13 · ESQUEMAS: zoom profesional, lectura de conexiones y exportación
+   ---------------------------------------------------------------------
+   - Zoom cambiando el viewBox del SVG (se ve nítido a cualquier tamaño)
+   - Rueda centrada en el cursor, pellizco, arrastre, teclado y minimapa
+   - Redes eléctricas: qué está unido con qué (para colores estándar,
+     puntos de unión, ficha del cable, "Seguir cable" y tabla de conexiones)
+   - Exportar PNG (2x / 4x) y SVG, e imprimir en A4 horizontal
+   El esquema original de la v12 no cambia: este módulo solo lo mira y lo amplía.
+   ===================================================================== */
+const EsqZoom = {
+  MIN: 0.1, MAX: 8,                       // de 10 % a 800 %
+  vb: null, meta: null, raf: 0, svg: null, wrap: null,
+  redes: [], redDeNodo: new Map(), redDeCable: new Map(),
+  siguiendo: false, redActiva: null, modoColor: 'estandar', quitar: [], punteros: new Map(), gesto: null,
+  COLORES: { GND: ['#1d1d1f', 'negro'], VCC: ['#e53935', 'rojo'], V33: ['#f57c1f', 'naranja'] },
+  SENAL: [['#1e63d6', 'azul'], ['#1f9d55', 'verde'], ['#f2c200', 'amarillo'], ['#8a4fd6', 'morado'], ['#00a3c4', 'celeste'], ['#e9e9ee', 'blanco']],
+
+  plantilla() {
+    return `<div class="esq-acc" role="toolbar" aria-label="Lectura y exportación del esquema">
+        <button class="btn sm" data-ea="seguir" aria-pressed="false" title="Clic en un pin o punto: se iluminan todas sus conexiones">Seguir cable</button>
+        <button class="btn sm" data-ea="color" title="Cambiar cómo se colorean los cables">Cables: estándar</button>
+        <button class="btn sm" data-ea="tabla" aria-pressed="false" title="Tabla de conexiones para copiar al cuaderno">Conexiones</button>
+        <div class="esq-exp"><button class="btn sm" data-ea="exportar" aria-expanded="false">Exportar ▾</button>
+          <div class="esq-menu" hidden><button data-ex="png2">Imagen PNG (2x)</button><button data-ex="png4">Imagen PNG (4x, muy nítida)</button><button data-ex="svg">Dibujo vectorial SVG</button><button data-ex="imprimir">Imprimir (A4 horizontal)</button></div></div>
+      </div>
+      <div class="esq-zoom" role="group" aria-label="Zoom del esquema">
+        <button data-ez="menos" title="Alejar (−)" aria-label="Alejar">−</button>
+        <span class="esq-pct" aria-live="polite">100 %</span>
+        <button data-ez="mas" title="Acercar (+)" aria-label="Acercar">+</button>
+        <button data-ez="ajustar" title="Ajustar a pantalla (0)">Ajustar</button>
+        <button data-ez="cien" title="Tamaño real">100 %</button>
+      </div>
+      <svg class="esq-mini" viewBox="0 0 ${W_BOARD} ${H_BOARD}" aria-label="Minimapa: muestra la zona visible. Toca para moverte."><rect class="mini-fondo" x="0" y="0" width="${W_BOARD}" height="${H_BOARD}" rx="12"/><g class="mini-partes"></g><rect class="mini-vista" rx="6"/></svg>
+      <div class="esq-tip" hidden></div>
+      <div class="esq-red" hidden></div>`;
+  },
+
+  montar() {
+    const svg = $('#board'), wrap = $('#lab-wrap'); if (!svg || !wrap) return;
+    this.desmontar();
+    this.svg = svg; this.wrap = wrap; this.vb = this.meta = null; this.siguiendo = false; this.redActiva = null;
+    this.modoColor = Store.gget('colorCables', 'estandar');
+    wrap.insertAdjacentHTML('beforeend', this.plantilla());
+    svg.insertAdjacentHTML('beforeend', '<g id="g-red"></g>');
+    $('#g-parts').insertAdjacentHTML('afterend', '<g id="g-jn"></g><g id="g-etq"></g>');
+    $('#lab-wrap').insertAdjacentHTML('afterend', `<section class="esq-tabla" id="esq-tabla" hidden aria-label="Tabla de conexiones">
+      <div class="esq-tabla-h"><b>Tabla de conexiones</b><span class="small muted">Cópiala en tu cuaderno</span><span class="pb-spacer"></span><button class="btn sm" data-ea="copiar">Copiar texto</button><button class="pb-px" data-ea="cerrar-tabla" aria-label="Cerrar la tabla">✕</button></div>
+      <div class="esq-tabla-b"></div></section>`);
+    const on = (el, t, f, o) => { el.addEventListener(t, f, o); this.quitar.push(() => el.removeEventListener(t, f, o)); };
+    on(svg, 'wheel', e => this.rueda(e), { passive: false });
+    on(svg, 'pointerdown', e => this.presionar(e));
+    on(window, 'pointermove', e => this.mover(e));
+    on(window, 'pointerup', e => this.soltar(e));
+    on(window, 'pointercancel', e => this.soltar(e));
+    on(svg, 'contextmenu', e => { if (this.ultimoPanDerecho && performance.now() - this.ultimoPanDerecho < 400) e.preventDefault(); });
+    on(svg, 'click', e => this.clicSeguir(e), true);
+    on(svg, 'pointerover', e => this.sobreCable(e));
+    on(svg, 'pointerout', e => { if (e.target.closest && e.target.closest('.part.wire')) this.fueraCable(); });
+    on(document, 'keydown', e => this.teclas(e));
+    const mini = wrap.querySelector('.esq-mini');
+    const irMini = e => { const r = mini.getBoundingClientRect(); this.centrarEn((e.clientX - r.left) / r.width * W_BOARD, (e.clientY - r.top) / r.height * H_BOARD); };
+    on(mini, 'pointerdown', e => { e.stopPropagation(); this.arrastreMini = true; try { mini.setPointerCapture(e.pointerId); } catch (x) { /* nada */ } irMini(e); });
+    on(mini, 'pointermove', e => { if (this.arrastreMini) irMini(e); });
+    on(mini, 'pointerup', () => { this.arrastreMini = false; });
+    wrap.querySelectorAll('[data-ez]').forEach(b => b.onclick = () => {
+      const a = b.dataset.ez;
+      if (a === 'mas') this.zoomEn(1.25); else if (a === 'menos') this.zoomEn(.8); else if (a === 'ajustar') this.ajustar(true); else if (a === 'cien') this.ponerZoom(1);
+    });
+    const acc = (a, b) => {
+      if (a === 'seguir') this.alternarSeguir();
+      else if (a === 'color') { this.modoColor = this.modoColor === 'estandar' ? 'voltaje' : 'estandar'; Store.gset('colorCables', this.modoColor); this.textoColor(); Lab.renderBoard(); }
+      else if (a === 'tabla' || a === 'cerrar-tabla') { const t = $('#esq-tabla'); t.hidden = a === 'cerrar-tabla' ? true : !t.hidden; $('[data-ea="tabla"]').setAttribute('aria-pressed', !t.hidden); if (!t.hidden) this.dibujarTabla(); }
+      else if (a === 'copiar') this.copiarTabla();
+      else if (a === 'exportar') { const m = wrap.querySelector('.esq-menu'); m.hidden = !m.hidden; b.setAttribute('aria-expanded', !m.hidden); }
+    };
+    $$('#lab-stage [data-ea]').forEach(b => b.onclick = e => { e.stopPropagation(); acc(b.dataset.ea, b); });
+    wrap.querySelectorAll('[data-ex]').forEach(b => b.onclick = e => {
+      e.stopPropagation(); wrap.querySelector('.esq-menu').hidden = true;
+      const x = b.dataset.ex; if (x === 'png2') this.exportarPNG(2); else if (x === 'png4') this.exportarPNG(4); else if (x === 'svg') this.exportarSVG(); else this.imprimir();
+    });
+    on(document, 'pointerdown', e => { const m = wrap.querySelector('.esq-menu'); if (m && !m.hidden && !e.target.closest('.esq-exp')) { m.hidden = true; wrap.querySelector('[data-ea="exportar"]').setAttribute('aria-expanded', 'false'); } });
+    this.textoColor();
+    this.ro = new ResizeObserver(() => this.alRedimensionar()); this.ro.observe(wrap);
+    Lab.center = () => this.ajustar(true);      // al cargar una plantilla, el circuito se ajusta a la pantalla
+    this.tras(); Lab.updateLive();
+    this.ajustar(false);
+  },
+  desmontar() {
+    this.quitar.forEach(f => { try { f(); } catch (e) { /* nada */ } }); this.quitar = [];
+    if (this.ro) this.ro.disconnect(); this.ro = null;
+    if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0;
+    this.punteros.clear(); this.gesto = null; this.svg = null; this.wrap = null;
+  },
+  textoColor() { const b = this.wrap && this.wrap.querySelector('[data-ea="color"]'); if (b) b.textContent = this.modoColor === 'estandar' ? 'Cables: estándar' : 'Cables: por voltaje'; },
+
+  /* ---------- Zoom y desplazamiento ---------- */
+  tam() { return { w: this.wrap ? this.wrap.clientWidth : 0, h: this.wrap ? this.wrap.clientHeight : 0 }; },
+  zoom() { const t = this.tam(); return this.meta && t.w ? t.w / this.meta.w : 1; },
+  aSVG(cx, cy, vb = this.meta) { const r = this.svg.getBoundingClientRect(); return { x: vb.x + (cx - r.left) * vb.w / r.width, y: vb.y + (cy - r.top) * vb.h / r.height }; },
+  limitar(m) {
+    // El centro de la vista no puede alejarse demasiado de la rejilla
+    const cx = clamp(m.x + m.w / 2, -W_BOARD * .25, W_BOARD * 1.25), cy = clamp(m.y + m.h / 2, -H_BOARD * .25, H_BOARD * 1.25);
+    return { x: cx - m.w / 2, y: cy - m.h / 2, w: m.w, h: m.h };
+  },
+  vistaConZoom(z, cx, cy) { const t = this.tam(); const w = t.w / z, h = t.h / z; return this.limitar({ x: cx - w / 2, y: cy - h / 2, w, h }); },
+  // Ajustar a pantalla: encuadra el circuito (o toda la rejilla si está vacía)
+  ajustar(animar) {
+    const t = this.tam(); if (!t.w || !t.h || !this.svg) return;
+    let x0 = 0, y0 = 0, x1 = W_BOARD, y1 = H_BOARD;
+    const pts = []; Lab.parts.forEach(p => EVEngine.partPins(p).forEach(q => pts.push(px(q))));
+    if (pts.length) {
+      const pad = 70, xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
+      x0 = Math.min(...xs) - pad; x1 = Math.max(...xs) + pad; y0 = Math.min(...ys) - pad; y1 = Math.max(...ys) + pad;
+      const minW = 360, minH = 240;   // un circuito muy pequeño no se agranda de más
+      if (x1 - x0 < minW) { const c = (x0 + x1) / 2; x0 = c - minW / 2; x1 = c + minW / 2; }
+      if (y1 - y0 < minH) { const c = (y0 + y1) / 2; y0 = c - minH / 2; y1 = c + minH / 2; }
+    }
+    const z = clamp(Math.min(t.w / (x1 - x0), t.h / (y1 - y0)), this.MIN, this.MAX);
+    this.ir(this.vistaConZoom(z, (x0 + x1) / 2, (y0 + y1) / 2), animar);
+  },
+  ponerZoom(z) { const m = this.meta; this.ir(this.vistaConZoom(clamp(z, this.MIN, this.MAX), m.x + m.w / 2, m.y + m.h / 2), true); },
+  // Zoom manteniendo fijo el punto que está bajo el cursor (o el centro si no hay cursor)
+  zoomEn(f, cx, cy) {
+    if (!this.meta) return;
+    const t = this.tam(), r = this.svg.getBoundingClientRect();
+    if (cx === undefined) { cx = r.left + r.width / 2; cy = r.top + r.height / 2; }
+    const p = this.aSVG(cx, cy), z0 = t.w / this.meta.w, z1 = clamp(z0 * f, this.MIN, this.MAX), k = z1 / z0;
+    const m = this.meta, w = m.w / k, h = m.h / k;
+    this.ir(this.limitar({ x: p.x - (p.x - m.x) / k, y: p.y - (p.y - m.y) / k, w, h }), true);
+  },
+  centrarEn(x, y) { const m = this.meta; this.ir(this.limitar({ x: x - m.w / 2, y: y - m.h / 2, w: m.w, h: m.h }), false); },
+  ir(m, animar) {
+    this.meta = m;
+    const pct = this.wrap && this.wrap.querySelector('.esq-pct'), t = this.tam();
+    if (pct && t.w) pct.textContent = Math.round(t.w / m.w * 100) + ' %';   // el porcentaje cambia al instante, aunque la vista se anime
+    if (!this.vb || !animar) { this.vb = Object.assign({}, m); this.aplicar(); return; }
+    if (this.raf) return;
+    const paso = () => {
+      this.raf = 0; const a = this.vb, d = this.meta; let fin = true;
+      ['x', 'y', 'w', 'h'].forEach(c => { const dif = d[c] - a[c]; if (Math.abs(dif) > d.w * 2e-4) { a[c] += dif * .3; fin = false; } else a[c] = d[c]; });
+      this.aplicar();
+      if (!fin) this.raf = requestAnimationFrame(paso);
+    };
+    this.raf = requestAnimationFrame(paso);
+  },
+  aplicar() {
+    if (!this.svg) return;
+    const v = this.vb, t = this.tam(), z = t.w ? t.w / v.w : 1;
+    this.svg.setAttribute('viewBox', `${v.x.toFixed(2)} ${v.y.toFixed(2)} ${v.w.toFixed(2)} ${v.h.toFixed(2)}`);
+    this.svg.classList.toggle('cerca', z >= 1.3);   // de cerca aparecen los nombres de las patas
+    this.svg.classList.toggle('lejos', z < .55);    // de lejos se ocultan los textos pequeños
+    const pct = this.wrap.querySelector('.esq-pct'); if (pct) pct.textContent = Math.round((t.w ? t.w / this.meta.w : 1) * 100) + ' %';
+    const mv = this.wrap.querySelector('.mini-vista');
+    if (mv) { mv.setAttribute('x', v.x); mv.setAttribute('y', v.y); mv.setAttribute('width', v.w); mv.setAttribute('height', v.h); }
+    Lab.placeBar();
+  },
+  alRedimensionar() {
+    const t = this.tam(); if (!t.w || !t.h) return;
+    if (!this.meta) { this.ajustar(false); return; }
+    const z = this.ultimoAncho ? this.ultimoAncho / this.meta.w : this.zoom(), m = this.meta;
+    this.ultimoAncho = t.w;
+    this.ir(this.vistaConZoom(z, m.x + m.w / 2, m.y + m.h / 2), false);
+  },
+  rueda(e) {
+    e.preventDefault();
+    const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;      // algunas ruedas cuentan en "líneas"
+    this.zoomEn(Math.exp(-d * (e.ctrlKey ? .01 : .0018)), e.clientX, e.clientY);
+    this.ocultarTip();
+  },
+  presionar(e) {
+    this.punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.punteros.size === 2) {
+      // Dos dedos: pellizco. Cancelamos el cable o arrastre que el primer dedo pudo empezar
+      document.dispatchEvent(new PointerEvent('pointercancel', { pointerId: -1 }));
+      const [a, b] = [...this.punteros.values()];
+      this.gesto = { tipo: 'pinza', d0: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), vb0: Object.assign({}, this.meta), m0: this.aSVG((a.x + b.x) / 2, (a.y + b.y) / 2) };
+      this.ocultarTip();
+      return;
+    }
+    const libre = !e.target.closest('.part, .hnd');
+    const panear = e.button === 1 || e.button === 2 || (e.button === 0 && Lab.tool === 'sel' && libre && !this.siguiendo);
+    if (panear) { this.gesto = { tipo: 'pan', id: e.pointerId, x: e.clientX, y: e.clientY, vb0: Object.assign({}, this.meta), boton: e.button, movido: false }; if (e.button === 1) e.preventDefault(); }
+  },
+  mover(e) {
+    if (!this.punteros.has(e.pointerId)) return;
+    this.punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const g = this.gesto; if (!g) return;
+    const t = this.tam();
+    if (g.tipo === 'pan' && e.pointerId === g.id) {
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.movido) { if (Math.hypot(dx, dy) < 5) return; g.movido = true; this.svg.classList.add('paneando'); this.ocultarTip(); }
+      const z = t.w / g.vb0.w;
+      this.meta = this.limitar({ x: g.vb0.x - dx / z, y: g.vb0.y - dy / z, w: g.vb0.w, h: g.vb0.h }); this.vb = Object.assign({}, this.meta); this.aplicar();
+    } else if (g.tipo === 'pinza' && this.punteros.size >= 2) {
+      const [a, b] = [...this.punteros.values()], r = this.svg.getBoundingClientRect();
+      const z = clamp((t.w / g.vb0.w) * Math.hypot(a.x - b.x, a.y - b.y) / g.d0, this.MIN, this.MAX);
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      this.meta = this.limitar({ x: g.m0.x - mx / z, y: g.m0.y - my / z, w: t.w / z, h: t.h / z }); this.vb = Object.assign({}, this.meta); this.aplicar();
+    }
+  },
+  soltar(e) {
+    if (e.pointerId === -1) return;   // el aviso de cancelación que enviamos nosotros
+    this.punteros.delete(e.pointerId);
+    const g = this.gesto; if (!g) return;
+    if (g.tipo === 'pan' && g.id === e.pointerId) {
+      if (g.movido) { Lab.justDragged = performance.now(); if (g.boton === 2) this.ultimoPanDerecho = performance.now(); }
+      this.gesto = null; if (this.svg) this.svg.classList.remove('paneando');
+    } else if (g.tipo === 'pinza' && this.punteros.size < 2) { this.gesto = null; Lab.justDragged = performance.now(); }
+  },
+  teclas(e) {
+    if (currentView !== 'lab' || !this.wrap || this.wrap.hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    const a = document.activeElement; if (a && (/INPUT|TEXTAREA|SELECT/.test(a.tagName) || a.closest('.v3d'))) return;
+    const t = this.tam(), paso = 80 / (t.w / this.meta.w), m = this.meta;
+    const mover = (dx, dy) => this.ir(this.limitar({ x: m.x + dx, y: m.y + dy, w: m.w, h: m.h }), true);
+    switch (e.key) {
+      case '+': case '=': case 'Add': this.zoomEn(1.25); break;
+      case '-': case '_': case 'Subtract': this.zoomEn(.8); break;
+      case '0': this.ajustar(true); break;
+      case 'ArrowLeft': mover(-paso, 0); break;
+      case 'ArrowRight': mover(paso, 0); break;
+      case 'ArrowUp': mover(0, -paso); break;
+      case 'ArrowDown': mover(0, paso); break;
+      case 'Escape': if (this.siguiendo) this.alternarSeguir(false); return;
+      default: return;
+    }
+    e.preventDefault();
+  },
+
+  /* ---------- Redes: qué puntos están unidos eléctricamente ---------- */
+  nombrePata(p, i) {
+    const f = EVEngine.FOOT[p.t]; if (f) return f.names[i] || 'pata ' + (i + 1);
+    if (p.t === 'G') return 'GND';
+    if (p.t === 'V' || p.t === 'FG') return ['+', '−'][i];
+    if (p.t === 'D' || p.t === 'Z') return ['A (ánodo)', 'K (cátodo)'][i];
+    return 'pata ' + (i + 1);
+  },
+  pataCorta(p, i) {
+    if (p.t === 'V' || p.t === 'FG') return ['+', '−'][i];
+    if (p.t === 'D' || p.t === 'Z') return ['A', 'K'][i];
+    return String(i + 1);
+  },
+  calcularRedes() {
+    const padre = new Map(), k = q => q[0] + ',' + q[1];
+    const raiz = x => { while (padre.get(x) !== x) { padre.set(x, padre.get(padre.get(x))); x = padre.get(x); } return x; };
+    const add = x => { if (!padre.has(x)) padre.set(x, x); };
+    const unir = (a, b) => { add(a); add(b); const ra = raiz(a), rb = raiz(b); if (ra !== rb) padre.set(ra, rb); };
+    const grado = new Map(), sumar = x => grado.set(x, (grado.get(x) || 0) + 1);
+    const terms = []; let tierra = null;
+    Lab.parts.forEach(p => {
+      if (p.t === 'W') { unir(k(p.a), k(p.b)); sumar(k(p.a)); sumar(k(p.b)); return; }
+      EVEngine.partPins(p).forEach((q, i) => { const n = k(q); add(n); sumar(n); terms.push({ p, i, n, nombre: this.nombrePata(p, i) }); });
+      if (p.t === 'G') { const n = k(p.a); if (tierra) unir(n, tierra); else tierra = n; }   // todas las tierras son la misma red
+    });
+    const mapa = new Map();
+    padre.forEach((_, n) => { const r = raiz(n); if (!mapa.has(r)) mapa.set(r, { nodos: [], terms: [], cables: [] }); mapa.get(r).nodos.push(n); });
+    terms.forEach(t => mapa.get(raiz(t.n)).terms.push(t));
+    Lab.parts.forEach(p => { if (p.t === 'W') mapa.get(raiz(k(p.a))).cables.push(p); });
+    // Clasificación para los colores estándar
+    let iSenal = 0;
+    const redes = [...mapa.values()].filter(r => r.cables.length || r.terms.length > 1);
+    redes.forEach(r => {
+      let v = null;
+      if (Lab.sim && Lab.res) { const [x, y] = r.nodos[0].split(',').map(Number); v = Lab.sim.nodeVoltage([x, y]); }
+      const esTierra = r.terms.some(t => t.p.t === 'G' || (t.p.t === 'V' && t.i === 1) || (t.p.t === 'REG' && t.i === 1));
+      const fuente = r.terms.some(t => (t.p.t === 'V' && t.i === 0) || (t.p.t === 'REG' && t.i === 2));
+      if (esTierra && !(v !== null && Math.abs(v) > .5)) r.clase = 'GND';
+      else if (fuente) r.clase = v !== null && Math.abs(v - 3.3) < .35 ? 'V33' : 'VCC';   // solo las salidas de fuentes y reguladores son "alimentación"
+      if (r.clase) { [r.color, r.nombreColor] = this.COLORES[r.clase]; r.nombre = r.clase === 'GND' ? 'GND (tierra)' : r.clase === 'V33' ? '3,3 V' : 'VCC (positivo)'; }
+      else { [r.color, r.nombreColor] = this.SENAL[iSenal % this.SENAL.length]; iSenal++; r.nombre = 'Señal ' + iSenal; }
+      r.v = v;
+    });
+    this.redes = redes; this.grado = grado;
+    this.redDeNodo = new Map(); this.redDeCable = new Map();
+    redes.forEach(r => { r.nodos.forEach(n => this.redDeNodo.set(n, r)); r.cables.forEach(c => this.redDeCable.set(c.id, r)); });
+  },
+  colorCable(p) { if (this.modoColor !== 'estandar') return null; const r = this.redDeCable.get(p.id); return r ? r.color : null; },
+  describir(t) { return `${t.nombre} de ${t.p.id}${TYPE_NAME[t.p.t] ? ' (' + TYPE_NAME[t.p.t].toLowerCase() + ')' : ''}`; },
+
+  /* Se llama cada vez que el esquema se redibuja */
+  tras() {
+    if (!this.svg || this.svg !== $('#board')) return;
+    this.calcularRedes();
+    // Clase de cada cable (para el borde claro de los cables negros) y puntos de unión
+    let jn = '';
+    this.svg.querySelectorAll('#g-parts .part.wire').forEach(g => { const r = this.redDeCable.get(g.dataset.id); g.dataset.clase = r && this.modoColor === 'estandar' ? r.clase || 'senal' : ''; });
+    this.grado.forEach((n, key) => {
+      if (n < 3) return;
+      const r = this.redDeNodo.get(key), [x, y] = px(key.split(',').map(Number));
+      jn += `<circle class="union" cx="${x}" cy="${y}" r="5.5" fill="${r && this.modoColor === 'estandar' ? r.color : 'var(--fg)'}"${r && r.clase === 'GND' ? ' data-clase="GND"' : ''}/>`;
+    });
+    const gj = $('#g-jn'); if (gj) gj.innerHTML = jn;
+    // Nombres de las patas (aparecen al acercar el zoom)
+    let et = '';
+    Lab.parts.forEach(p => {
+      if (p.t === 'W' || p.t === 'G' || EVEngine.FOOT[p.t] || !p.b) return;
+      const [ax, ay] = px(p.a), [bx, by] = px(p.b), L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
+      [[ax, ay, 1], [bx, by, -1]].forEach(([x, y, s], i) => { et += `<text class="etq-pin" x="${(x + ux * 12 * s - uy * 11).toFixed(1)}" y="${(y + uy * 12 * s + ux * 11 + 3).toFixed(1)}" text-anchor="middle">${esc(this.pataCorta(p, i))}</text>`; });
+    });
+    const ge = $('#g-etq'); if (ge) ge.innerHTML = et;
+    this.dibujarMini();
+    if (this.redActiva) this.marcarRed(this.redDeNodo.get(this.redActiva) || null, true);
+    const tabla = $('#esq-tabla'); if (tabla && !tabla.hidden) this.dibujarTabla();
+  },
+  dibujarMini() {
+    const g = this.wrap && this.wrap.querySelector('.mini-partes'); if (!g) return;
+    let s = '';
+    Lab.parts.forEach(p => {
+      const pins = EVEngine.partPins(p).map(px);
+      if (p.t === 'W' || (!EVEngine.FOOT[p.t] && pins.length === 2)) { const r = this.redDeCable.get(p.id); s += `<line x1="${pins[0][0]}" y1="${pins[0][1]}" x2="${pins[1][0]}" y2="${pins[1][1]}" class="${p.t === 'W' ? 'mini-cable' : 'mini-comp'}"${r && p.t === 'W' && this.modoColor === 'estandar' && r.clase !== 'GND' ? ` style="stroke:${r.color}"` : ''}/>`; }
+      else { const xs = pins.map(q => q[0]), ys = pins.map(q => q[1]); s += `<rect class="mini-comp" x="${Math.min(...xs) - 14}" y="${Math.min(...ys) - 14}" width="${Math.max(...xs) - Math.min(...xs) + 28}" height="${Math.max(...ys) - Math.min(...ys) + 28}" rx="6"/>`; }
+    });
+    g.innerHTML = s;
+  },
+
+  /* ---------- Ficha del cable al pasar el mouse ---------- */
+  sobreCable(e) {
+    const g = e.target.closest && e.target.closest('.part.wire'); if (!g || this.gesto) return;
+    const w = Lab.part(g.dataset.id), r = this.redDeCable.get(g.dataset.id); if (!w || !r) return;
+    this.svg.querySelectorAll('.part.wire.resaltado').forEach(x => x.classList.remove('resaltado'));
+    g.classList.add('resaltado');
+    const punta = q => { const n = q[0] + ',' + q[1], ts = r.terms.filter(t => t.n === n); return ts.length ? ts.map(t => this.describir(t)).join(' y ') : 'unión con otro cable'; };
+    const otros = r.terms.length > 2 ? `<small>Toda esta conexión une: ${r.terms.slice(0, 6).map(t => esc(t.p.id + ' · ' + t.nombre)).join(', ')}${r.terms.length > 6 ? '…' : ''}</small>` : '';
+    const v = r.v !== null && r.v !== undefined ? ` · ${fmt(r.v, 'V')}` : '';
+    this.mostrarTip(`<b>Cable ${esc(w.id)} · ${esc(r.nombre)}${v}</b><span>${esc(punta(w.a))} → ${esc(punta(w.b))}</span>${otros}`, e);
+  },
+  fueraCable() { if (this.svg) this.svg.querySelectorAll('.part.wire.resaltado').forEach(x => x.classList.remove('resaltado')); this.ocultarTip(); },
+  mostrarTip(html, e) {
+    const tip = this.wrap.querySelector('.esq-tip'); tip.innerHTML = html; tip.hidden = false;
+    const r = this.wrap.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    tip.style.left = clamp(x + 14, 8, r.width - tip.offsetWidth - 8) + 'px';
+    tip.style.top = clamp(y + 16, 8, r.height - tip.offsetHeight - 8) + 'px';
+  },
+  ocultarTip() { const tip = this.wrap && this.wrap.querySelector('.esq-tip'); if (tip) tip.hidden = true; },
+
+  /* ---------- Modo "Seguir cable" ---------- */
+  alternarSeguir(estado) {
+    this.siguiendo = estado === undefined ? !this.siguiendo : estado;
+    const b = this.wrap.querySelector('[data-ea="seguir"]'); if (b) b.setAttribute('aria-pressed', this.siguiendo);
+    this.svg.classList.toggle('siguiendo', this.siguiendo);
+    if (!this.siguiendo) { this.redActiva = null; this.marcarRed(null); }
+    else toast('Seguir cable: toca un pin o un punto del circuito para ver todo lo que está conectado. Esc para salir.', '', 4500);
+  },
+  clicSeguir(e) {
+    if (!this.siguiendo) return;
+    e.stopPropagation(); e.preventDefault();
+    const m = this.svg.getScreenCTM(); if (!m) return;
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()), x = Math.round((p.x - M) / S), y = Math.round((p.y - M) / S);
+    let r = this.redDeNodo.get(x + ',' + y) || null;
+    if (!r) { const pe = e.target.closest('.part'), parte = pe && Lab.part(pe.dataset.id); if (parte) { const q = EVEngine.partPins(parte)[0]; r = this.redDeNodo.get(q[0] + ',' + q[1]) || null; } }
+    if (!r) { this.marcarRed(null); this.redActiva = null; toast('Ese punto no tiene conexiones.', 'warn', 2500); return; }
+    this.redActiva = r.nodos[0];
+    this.marcarRed(r);
+  },
+  marcarRed(r, silencioso) {
+    if (!this.svg) return;
+    this.svg.classList.toggle('con-red', !!r);
+    this.svg.querySelectorAll('#g-parts .part').forEach(g => g.classList.remove('en-red'));
+    const caja = this.wrap.querySelector('.esq-red'), capa = $('#g-red');
+    if (!r) { caja.hidden = true; if (capa) capa.innerHTML = ''; return; }
+    const ids = new Set(r.cables.map(c => c.id).concat(r.terms.map(t => t.p.id)));
+    this.svg.querySelectorAll('#g-parts .part').forEach(g => g.classList.toggle('en-red', ids.has(g.dataset.id)));
+    if (capa) capa.innerHTML = r.terms.map(t => { const [x, y] = px(t.n.split(',').map(Number)); return `<circle class="anillo-red" cx="${x}" cy="${y}" r="10"/>`; }).join('');
+    caja.innerHTML = `<b>${esc(r.nombre)}</b> <span class="small muted">· cable ${esc(r.nombreColor)} · ${r.cables.length} cable(s)</span><div class="small">${r.terms.map(t => esc(this.describir(t))).join(' · ') || 'Solo cables, sin componentes'}</div>`;
+    caja.hidden = false;
+  },
+
+  /* ---------- Tabla de conexiones ---------- */
+  filas() {
+    return this.redes.filter(r => r.terms.length).map((r, i) => ({ n: i + 1, nombre: r.nombre, color: r.color, nombreColor: r.nombreColor, conecta: r.terms.map(t => t.p.id + ' · ' + t.nombre), cables: r.cables.map(c => c.id) }));
+  },
+  tablaHTML() {
+    const f = this.filas();
+    if (!f.length) return '<p class="small muted">El esquema todavía no tiene conexiones.</p>';
+    return `<table class="t esq-t"><thead><tr><th>N.º</th><th>Conexión</th><th>Color</th><th>Se conectan</th><th>Cables</th></tr></thead><tbody>${f.map(x => `<tr><td>${x.n}</td><td>${esc(x.nombre)}</td><td><i class="esq-col" style="background:${x.color}"></i> ${esc(x.nombreColor)}</td><td>${esc(x.conecta.join(' · '))}</td><td class="mono">${esc(x.cables.join(', ') || '—')}</td></tr>`).join('')}</tbody></table>`;
+  },
+  dibujarTabla() { const b = $('#esq-tabla .esq-tabla-b'); if (b) b.innerHTML = this.tablaHTML(); },
+  async copiarTabla() {
+    const txt = (Lab.title || 'Esquema') + '\n' + this.filas().map(x => `${x.n}. ${x.nombre} (cable ${x.nombreColor}): ${x.conecta.join(', ')}${x.cables.length ? ' — cables ' + x.cables.join(', ') : ''}`).join('\n');
+    try { await navigator.clipboard.writeText(txt); toast('Tabla copiada. Pégala en tu cuaderno digital o en Word.', 'ok'); }
+    catch (e) { toast('No se pudo copiar automáticamente: selecciona la tabla y usa Ctrl+C.', 'warn'); }
+  },
+
+  /* ---------- Exportar e imprimir (siempre en tema claro, para ahorrar tinta) ---------- */
+  conTemaClaro(fn) {
+    const r = document.documentElement, antes = r.dataset.luz;
+    r.dataset.luz = 'dia'; Lab.colorsDirty = true; Lab.updateLive();
+    try { return fn(); } finally { if (antes === undefined) delete r.dataset.luz; else r.dataset.luz = antes; Lab.colorsDirty = true; Lab.updateLive(); }
+  },
+  svgTexto() {
+    return this.conTemaClaro(() => {
+      const svg = this.svg, cerca = svg.classList.contains('cerca'), lejos = svg.classList.contains('lejos');
+      svg.classList.add('cerca'); svg.classList.remove('lejos', 'con-red');   // en el papel van todos los nombres de patas
+      const clon = svg.cloneNode(true);
+      svg.classList.toggle('cerca', cerca); svg.classList.toggle('lejos', lejos); svg.classList.toggle('con-red', !!this.redActiva && this.siguiendo);
+      // Los estilos se calculan con las clases del momento de la copia
+      svg.classList.add('cerca'); svg.classList.remove('lejos', 'con-red');
+      const props = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'opacity', 'fill-opacity', 'stroke-opacity', 'font-family', 'font-size', 'font-weight', 'letter-spacing', 'text-anchor', 'display', 'visibility'];
+      const orig = svg.querySelectorAll('*'), copia = clon.querySelectorAll('*');
+      const sobran = [];   // zonas invisibles para el mouse: no van en el dibujo
+      orig.forEach((el, i) => {
+        if (el.classList.contains('hit') || el.classList.contains('hl') || el.classList.contains('hlbox')) { sobran.push(copia[i]); return; }
+        const cs = getComputedStyle(el); copia[i].setAttribute('style', props.map(pp => pp + ':' + cs.getPropertyValue(pp)).join(';')); copia[i].removeAttribute('class');
+      });
+      sobran.forEach(n => n.remove());
+      const over = clon.querySelector('#g-over'); if (over) over.remove();
+      svg.classList.toggle('cerca', cerca); svg.classList.toggle('lejos', lejos); svg.classList.toggle('con-red', !!this.redActiva && this.siguiendo);
+      clon.removeAttribute('class'); clon.removeAttribute('style');
+      clon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      clon.setAttribute('viewBox', `0 0 ${W_BOARD} ${H_BOARD}`); clon.setAttribute('width', W_BOARD); clon.setAttribute('height', H_BOARD);
+      clon.insertAdjacentHTML('afterbegin', `<rect x="0" y="0" width="${W_BOARD}" height="${H_BOARD}" fill="#ffffff"/>`);
+      clon.insertAdjacentHTML('beforeend', `<text x="${W_BOARD - 12}" y="${H_BOARD - 10}" text-anchor="end" style="font:600 12px Arial;fill:#6d7898">${esc((Lab.title || 'Esquema') + ' · ELECTROVERSE')}</text>`);
+      return new XMLSerializer().serializeToString(clon);
+    });
+  },
+  nombreArchivo(ext) { return 'esquema-' + (Lab.title || 'circuito').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.' + ext; },
+  descargar(blob, nombre) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); },
+  exportarSVG() { this.descargar(new Blob([this.svgTexto()], { type: 'image/svg+xml' }), this.nombreArchivo('svg')); toast('Esquema guardado como SVG (vectorial: se ve nítido a cualquier tamaño).', 'ok'); },
+  async exportarPNG(escala) {
+    try {
+      const url = URL.createObjectURL(new Blob([this.svgTexto()], { type: 'image/svg+xml' })), img = new Image();
+      await new Promise((ok, mal) => { img.onload = ok; img.onerror = mal; img.src = url; });
+      const cv = document.createElement('canvas'); cv.width = W_BOARD * escala; cv.height = H_BOARD * escala;
+      const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      cv.toBlob(b => { this.descargar(b, this.nombreArchivo('png')); toast(`Imagen PNG guardada (${cv.width} × ${cv.height} píxeles).`, 'ok'); }, 'image/png');
+    } catch (e) { console.error(e); toast('No se pudo crear la imagen en este navegador. Prueba con "SVG".', 'bad'); }
+  },
+  imprimir() {
+    const viejo = $('#imp-esq'); if (viejo) viejo.remove();
+    const div = document.createElement('div'); div.id = 'imp-esq';
+    div.innerHTML = `<h1>${esc(Lab.title || 'Esquema')}</h1><div class="imp-svg">${this.svgTexto()}</div><h2>Tabla de conexiones</h2>${this.tablaHTML()}<p class="imp-pie">ELECTROVERSE · ${new Date().toLocaleDateString('es-PE')}</p>`;
+    document.body.appendChild(div); document.body.classList.add('imp-esq');
+    const fin = () => { div.remove(); document.body.classList.remove('imp-esq'); window.removeEventListener('afterprint', fin); };
+    window.addEventListener('afterprint', fin);
+    window.print();
+  }
 };
 
 /* ===== Catálogo de componentes: biblioteca, símbolos 2D, propiedades e instrumentos ===== */
