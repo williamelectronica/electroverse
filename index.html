@@ -1249,6 +1249,7 @@ onmessage = async (ev) => {
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
 <script src="js/visor3d.js?v=13.0.3"></script>
 <script src="js/modelos3d.js?v=13.0.3"></script>
+<script src="js/realistas3d.js?v=13.0.4"></script>
 <script>
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
 (function (root) {
@@ -7264,6 +7265,11 @@ const Proto3D = Object.assign(Object.create(View3D), {
     const center = () => { const c = new T.Vector3(); P.forEach(v => c.add(v)); return c.multiplyScalar(1 / P.length); };
     g.userData.mid = center();
     if (MOD_DEFS[p.k]) return this.buildMod(p, g);
+    // v13: piezas con modelo realista (js/realistas3d.js); si algo falla se usa el modelo anterior
+    if (window.PB_REAL && PB_REAL[p.k]) {
+      try { PB_REAL[p.k](this, g, p, { A, B, P, burned, center }); if (burned) this.addSmoke(g, g.userData.mid.clone().setY(2.2)); return g; }
+      catch (e) { console.error('modelo realista', p.k, e); this.disposeGroup(g); g.clear(); g.userData.leads = null; }
+    }
     switch (p.k) {
       case 'WIRE': { // los cables se dibujan agrupados por color (rebuildWires) para que muchos cables no bajen la fluidez
         const L = A.distanceTo(B); g.userData.mid = A.clone().lerp(B, 0.5).setY(0); g.userData.wireTop = Math.max(pinH(p.pins[0]), pinH(p.pins[1])) + 1.25 + Math.min(L, 45) * 0.1; g.userData.isWire = true;
