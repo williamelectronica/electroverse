@@ -17,9 +17,10 @@
 
   /* ---------- Niveles de calidad ---------- */
   const CALIDAD = {
-    alta:  { nombre: 'Alta',  pr: 2,   aa: true,  env: true,  sombras: true,  suaves: true,  mapa: 2048, seg: 32, pxmm: 22, redondeo: true },
-    media: { nombre: 'Media', pr: 1.5, aa: true,  env: true,  sombras: true,  suaves: false, mapa: 1024, seg: 18, pxmm: 14, redondeo: true },
-    baja:  { nombre: 'Baja',  pr: 1,   aa: false, env: false, sombras: false, suaves: false, mapa: 0,    seg: 10, pxmm: 8,  redondeo: false }
+    // pxmm = píxeles por milímetro de las texturas (serigrafía, textos de chips, pantallas): más = más nítido al acercar
+    alta:  { nombre: 'Alta',  pr: 2,   aa: true,  env: true,  sombras: true,  suaves: true,  mapa: 2048, seg: 32, pxmm: 36, redondeo: true },
+    media: { nombre: 'Media', pr: 1.5, aa: true,  env: true,  sombras: true,  suaves: false, mapa: 1024, seg: 20, pxmm: 26, redondeo: true },
+    baja:  { nombre: 'Baja',  pr: 1,   aa: false, env: false, sombras: false, suaves: false, mapa: 0,    seg: 10, pxmm: 12, redondeo: false }
   };
 
   function calidadInicial() {
@@ -511,7 +512,11 @@
 
       /* ----- Renderizador ----- */
       const r = new T.WebGLRenderer({ canvas, antialias: Q.aa && (Q === CALIDAD.alta || (window.devicePixelRatio || 1) < 2), alpha: true, powerPreference: Q === CALIDAD.alta ? 'high-performance' : 'default' });
-      r.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pr));   // nitidez limitada a 2 para no gastar de más
+      // Resolución liviana mientras se mueve y más fina (hasta 2x) cuando el modelo queda quieto
+      const dpr = window.devicePixelRatio || 1;
+      V.prBase = Math.min(dpr, Q.pr);
+      V.prNitido = Q === CALIDAD.baja ? V.prBase : Math.min(2, Math.max(1, dpr) * (Q === CALIDAD.alta ? 2 : 1.6));
+      r.setPixelRatio(V.prBase);
       r.outputColorSpace = T.SRGBColorSpace;
       r.toneMapping = T.ACESFilmicToneMapping;
       r.toneMappingExposure = 1.05;
@@ -597,7 +602,7 @@
       /* ----- Bucle de dibujo: solo cuando algo cambia ----- */
       V.pedir = () => { if (!V.raf && V.activo) V.raf = requestAnimationFrame(() => this.cuadro(V)); };
       ctl.addEventListener('change', V.pedir);
-      ctl.addEventListener('start', () => { V.usuarioMovio = true; this.ocultarTip(V); V.pedir(); });
+      ctl.addEventListener('start', () => { V.usuarioMovio = true; this.ocultarTip(V); this.liviano(V); V.pedir(); });
 
       // Tamaño del lienzo
       const ajustar = () => {
@@ -627,6 +632,7 @@
         const a = b.dataset.v3;
         if (a === 'etiquetas') { V.etiquetas = !V.etiquetas; b.setAttribute('aria-pressed', V.etiquetas); this.armarEtiquetas(V); }
         if (a === 'pinout') { V.pinout = !V.pinout; b.setAttribute('aria-pressed', V.pinout); this.armarEtiquetas(V); if (V.pinout && !V.puntas.length) this.aviso(V, 'Este componente no tiene pines para mostrar.'); }
+        if (a === 'explotar' || a === 'reiniciar') this.liviano(V);
         if (a === 'explotar') { V.metaExplosion = V.metaExplosion ? 0 : 1; b.setAttribute('aria-pressed', !!V.metaExplosion); V.tExp = performance.now(); V.desdeExp = V.explosion; V.pedir(); }
         if (a === 'reiniciar') { V.usuarioMovio = false; this.vistaInicial(V); V.metaExplosion = 0; V.tExp = performance.now(); V.desdeExp = V.explosion; cont.querySelector('[data-v3="explotar"]').setAttribute('aria-pressed', 'false'); V.pedir(); }
       });
@@ -639,6 +645,11 @@
       document.addEventListener('visibilitychange', visib); V.quitar.push(() => document.removeEventListener('visibilitychange', visib));
       V.estad = { cuadros: 0, ms: 0 };
       V.pedir();
+    },
+
+    liviano(V) {
+      clearTimeout(V.nitTO);
+      if (V.nitido && V.r) { V.nitido = false; V.r.setPixelRatio(V.prBase); V.r.setSize(V.ancho, V.alto, false); }
     },
 
     vistaInicial(V) {
@@ -668,7 +679,13 @@
       this.moverEtiquetas(V);
       const dt = performance.now() - t0;
       V.estad.cuadros++; V.estad.ms += dt;
-      if (V.estad.cuadros > 2) V.estad.msMedidos = (V.estad.msMedidos || 0) + dt;   // los 2 primeros incluyen la preparación de sombreadores
+      if (V.estad.cuadros > 2 && !V.nitido) V.estad.msMedidos = (V.estad.msMedidos || 0) + dt;   // los 2 primeros incluyen la preparación de sombreadores
+      // Quieto medio segundo → se vuelve a dibujar con más resolución (letras y bordes más finos)
+      clearTimeout(V.nitTO);
+      if (!seguir && !V.nitido && V.prNitido > V.prBase + .05) V.nitTO = setTimeout(() => {
+        if (!V.activo || V.raf) return;
+        V.nitido = true; V.r.setPixelRatio(V.prNitido); V.r.setSize(V.ancho, V.alto, false); V.pedir();
+      }, 450);
       // Equipo lento: si nadie eligió la calidad a mano, bajamos a "Baja" automáticamente
       if (V.estad.cuadros === 8 && this.calidad !== 'baja' && !this.elegidaAMano && V.estad.msMedidos / 6 > 45) {
         this.calidad = 'baja';
@@ -761,6 +778,7 @@
     desmontar() {
       const V = this.actual; if (!V) return;
       V.activo = false; this.actual = null;
+      clearTimeout(V.nitTO);
       if (V.raf) cancelAnimationFrame(V.raf);
       V.quitar.forEach(f => { try { f(); } catch (e) { /* nada */ } });
       if (V.ro) V.ro.disconnect();
