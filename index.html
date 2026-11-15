@@ -7162,6 +7162,8 @@ const Proto3D = Object.assign(Object.create(View3D), {
       case 'UNO': case 'ESP32': {
         const d = Object.assign(Object.create(MCU_DEFS[p.k]), { x0: PB_MCU_AT[0] }), y0 = mcuY0() + PB_MCU_AT[1], cx = d.x0 + d.w / 2 - 32, cz = y0 + d.h / 2 - 8;
         const c = new T.Vector3(cx, 0, cz);
+        const alta = this.mcuAlta(p, MCU_DEFS[p.k]);   // v13: placa de alta calidad (la misma de la Biblioteca)
+        if (alta) { alta.position.set(cx, 0, cz); alta.userData.id = p.id; alta.userData.mid = c.clone(); return alta; }
         const pcb = new T.Mesh(new T.BoxGeometry(d.w, 0.16, d.h), this.mat('pcb' + p.k, { color: d.color, roughness: 0.6, envMapIntensity: 0.3 })); pcb.position.set(cx, 1.5, cz); g.add(pcb);
         [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => { const st = new T.Mesh(new T.CylinderGeometry(0.25, 0.25, 1.5, 8), this.mat('standoff', { color: 0xd8c27a, metalness: 0.6 })); st.position.set(cx + sx * (d.w / 2 - 1), 0.75, cz + sz * (d.h / 2 - 1)); g.add(st); });
         const hdr = this.mat('header', { color: 0x15171b, roughness: 0.6 });
@@ -7230,7 +7232,7 @@ const Proto3D = Object.assign(Object.create(View3D), {
     if (burned && p.k !== 'WIRE') this.addSmoke(g, g.userData.mid.clone().setY(2.2));
     return g;
   },
-  unmount() { View3D.unmount.call(this); this.tagGrp = null; this.beads = null; this.wCurves = []; this.shTex = null; if (this.envTex) { this.envTex.dispose(); this.envTex = null; } if (this.bar) { this.bar.remove(); this.bar = null; } Object.values(this.modTexs || {}).forEach(e => e.tex.dispose()); this.modTexs = {}; },
+  unmount() { this.limpiarAlta(true); View3D.unmount.call(this); this.tagGrp = null; this.beads = null; this.wCurves = []; this.shTex = null; if (this.envTex) { this.envTex.dispose(); this.envTex = null; } if (this.bar) { this.bar.remove(); this.bar = null; } Object.values(this.modTexs || {}).forEach(e => e.tex.dispose()); this.modTexs = {}; },
   modTexture(p) {
     const D = MOD_DEFS[p.k], pad = 14, sc = 4, Wp = mm(D.w) + 2 * pad, Hp = mm(D.h) + 2 * pad, st = Proto.modSt[p.id] || { pw: false };
     let e = this.modTexs[p.id];
@@ -7244,8 +7246,150 @@ const Proto3D = Object.assign(Object.create(View3D), {
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     return e;
   },
+  /* =====================================================================
+     v13 · Modelos de alta calidad de la Biblioteca dentro de la protoboard 3D
+     - Se construyen con la misma fábrica de piezas (js/visor3d.js), pero con el Three.js de aquí (r128)
+     - Los pines se dibujan exactamente donde la protoboard conecta los cables
+     - Se guardan en memoria (caché) para no reconstruirlos en cada cambio del montaje
+     ===================================================================== */
+  BIB_DE_MOD: { LCD: 'lcd-16x2-i2c', OLED: 'oled-ssd1306', SERVO: 'servo-sg90', RELAY: 'rele-1', US: 'hc-sr04', DHT: 'dht11', RFID: 'rfid-rc522', MQ2: 'mq-2', MQ135: 'mq-135', SOUND: 'ky-038', JOY: 'joystick-ky-023', PIR: 'pir-hc-sr501', IROBS: 'ir-obstaculos' },
+  altaCache: {},
+  altaV() {
+    if (this._altaV !== undefined) return this._altaV;
+    const ok = window.Visor3D && Visor3D.fabricaExterna && window.EV_DATA;
+    const calidad = this.eco ? 'baja' : Luz.quality() === 'alta' ? 'alta' : 'media';
+    this._altaV = ok ? Visor3D.fabricaExterna(THREE, calidad, { aniso: this.maxAniso || 4 }) : null;
+    return this._altaV;
+  },
+  modeloBib(id, quitarCables) {
+    const V = this.altaV(), c = V && EV_DATA.buscar(id); if (!c) return null;
+    const fn = Visor3D.modelos[id] || Visor3D.modelos['*' + c.categoria] || Visor3D.modelos['*'];
+    const m = fn(V.F, c, V);
+    // Sus cabeceras y serigrafía se reemplazan por las de la protoboard (los cables llegan a esos pines)
+    const fuera = [];
+    m.traverse(o => { const inf = o.userData.info; if (o.userData.cabecera || (o.userData.esPCB && o.userData.calco) || (quitarCables && inf && /^Cable (marrón|rojo|naranja)$/.test(inf.nombre))) fuera.push(o); });
+    fuera.forEach(o => { if (o.parent) o.parent.remove(o); o.traverse(x => { if (x.geometry) x.geometry.dispose(); }); });
+    return m;
+  },
+  buscarInfo(m, nombre) { let r = null; m.traverse(o => { if (!r && o.userData.info && o.userData.info.nombre === nombre) r = o; }); return r; },
+  // Rótulos blancos de los pines, dibujados en una lámina sobre la placa (unidades de hueco)
+  rotulosProto(V, w, h, pins, y, opciones = {}) {
+    const F = V.F, mg = 2;
+    const lam = F.calco(w + 2 * mg, h + 2 * mg, (c, W, H) => {
+      pins.forEach(q => {
+        const x = q.x + mg, z = q.y + mg, s = q.label, lado = q.lado;
+        if (lado === 'arriba') F.texto(c, s, x, z - 0.95, 0.42, '#f2f4f8', { rot: -Math.PI / 2, alinear: 'left' });
+        else if (lado === 'abajo') F.texto(c, s, x, z + 0.95, 0.42, '#f2f4f8', { rot: -Math.PI / 2, alinear: 'right' });
+        else if (lado === 'izq') F.texto(c, s, x - 0.75, z, 0.42, '#f2f4f8', { alinear: 'right' });
+        else F.texto(c, s, x + 0.75, z, 0.42, '#f2f4f8', { alinear: 'left' });
+      });
+      if (opciones.titulo) F.texto(c, opciones.titulo[0], opciones.titulo[1] + mg, opciones.titulo[2] + mg, opciones.titulo[3] || 1.2, '#f2f4f8', { peso: 800 });
+    }, { pxmm: 46 });
+    lam.position.set(w / 2, y, h / 2);
+    return lam;
+  },
+  mcuAlta(p, d) {
+    const clave = 'mcu:' + p.k, en = this.altaCache[clave];
+    if (en) return en;
+    const T = THREE, V = this.altaV(); if (!V) return null;
+    const m = this.modeloBib(p.k === 'UNO' ? 'uno-r3' : 'esp32-devkit-30'); if (!m) return null;
+    const w = new T.Group(); w.userData.altaCache = true; w.userData.clave = clave;
+    const k = 1 / 2.54, yTop = 1.58;   // 1 unidad = 1 hueco = 2,54 mm
+    m.scale.setScalar(k); m.position.y = yTop - 1.6 * k;
+    if (p.k === 'ESP32') m.rotation.y = -Math.PI / 2;   // en la mesa el USB queda a la izquierda
+    w.add(m);
+    // Separadores de latón bajo la placa
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => { const st = new T.Mesh(new T.CylinderGeometry(0.25, 0.25, yTop - 0.63, 10), this.mat('standoff', { color: 0xd8c27a, metalness: 0.6 })); st.position.set(sx * (d.w / 2 - 1), (yTop - 0.63) / 2, sz * (d.h / 2 - 1)); w.add(st); });
+    // Cabeceras hembra justo donde la protoboard conecta los cables
+    const hdr = this.mat('header', { color: 0x15171b, roughness: 0.6 }), rows = {};
+    d.pins.forEach(q => { (rows[q.y] = rows[q.y] || []).push(q.x); });
+    Object.entries(rows).forEach(([y, xs]) => {
+      xs.sort((a, b) => a - b); let s0 = xs[0], prev = xs[0];
+      const seg = (a, b) => { const mm = new T.Mesh(new T.BoxGeometry(b - a + 0.9, 0.85, 0.9), hdr); mm.position.set((a + b) / 2 - d.w / 2, yTop + 0.42, +y - d.h / 2); w.add(mm); };
+      xs.slice(1).forEach(x => { if (x - prev > 1.2) { seg(s0, prev); s0 = x; } prev = x; }); seg(s0, prev);
+    });
+    const hm = this.mat('hdrhole', { color: 0x000000 });
+    d.pins.forEach(q => { const hole = new T.Mesh(new T.BoxGeometry(0.34, 0.02, 0.34), hm); hole.position.set(q.x - d.w / 2, 2.44, q.y - d.h / 2); w.add(hole); });
+    // Rótulos de cada pin
+    const pins = d.pins.map(q => ({ x: q.x, y: q.y, label: q.label, lado: q.y < d.h / 2 ? 'abajo' : 'arriba' }));
+    const lam = this.rotulosProto(V, d.w, d.h, pins, yTop + 0.012, p.k === 'UNO' ? { titulo: ['UNO R3', 15.8, 12.2, 1.6] } : {});
+    lam.position.x -= d.w / 2; lam.position.z -= d.h / 2; w.add(lam);
+    // LED del pin 13 (UNO) o GPIO 2 (ESP32): se enciende con el programa
+    const lm = new T.MeshStandardMaterial({ color: p.k === 'UNO' ? 0xffb300 : 0x3d8bff, emissive: p.k === 'UNO' ? 0xffb300 : 0x3d8bff, emissiveIntensity: 0.05 });
+    const led = this.buscarInfo(m, p.k === 'UNO' ? 'LED "L" (pin 13)' : 'LED azul (GPIO 2)');
+    if (led && led.children[1]) led.children[1].material = lm;
+    w.userData.mcuLed = { mat: lm, pin: p.k === 'UNO' ? 13 : 2 }; w.userData.ledMatAlta = lm;
+    this.altaCache[clave] = w;
+    return w;
+  },
+  modAlta(p, D) {
+    const id = this.BIB_DE_MOD[p.k]; if (!id) return null;
+    const en = this.altaCache[p.id];
+    if (en && en.userData.k === p.k) return en;
+    const T = THREE, V = this.altaV(); if (!V) return null;
+    const m = this.modeloBib(id, p.k === 'SERVO'); if (!m) return null;
+    const w = new T.Group(); w.userData.altaCache = true; w.userData.clave = p.id; w.userData.k = p.k;
+    // Escala para que el modelo ocupe el mismo lugar que el módulo en la mesa
+    const caja = new T.Box3().setFromObject(m), tam = caja.getSize(new T.Vector3()), ctr = caja.getCenter(new T.Vector3());
+    const s = clamp(Math.min(D.w * 2.54 / tam.x, D.h * 2.54 / tam.z), 0.55, 1.3), k = s / 2.54;
+    let tienePcb = false; m.traverse(o => { if (o.userData.esPCB) tienePcb = true; });
+    const yTop = 0.8;
+    m.scale.setScalar(k);
+    m.position.set(D.w / 2 - ctr.x * k, tienePcb ? yTop - 1.6 * k : 0, D.h / 2 - ctr.z * k);
+    w.add(m);
+    if (tienePcb) [[0.6, 0.6], [D.w - 0.6, 0.6], [0.6, D.h - 0.6], [D.w - 0.6, D.h - 0.6]].forEach(([dx, dz]) => { const st = new T.Mesh(new T.CylinderGeometry(0.18, 0.18, yTop - 1.6 * k, 8), this.mat('standoff', { color: 0xd8c27a, metalness: 0.6 })); st.position.set(dx, (yTop - 1.6 * k) / 2, dz); w.add(st); });
+    // Pines macho cortos donde llegan los cables (los bornes de tornillo no llevan pin)
+    const base = this.mat('header', { color: 0x15171b, roughness: 0.6 }), oro = this.mat('pinoro', { color: 0xd9ab45, metalness: 1, roughness: 0.28 });
+    const yBase = tienePcb ? yTop : 0.4;
+    D.pins.forEach(q => {
+      if (q.kind === 'term') return;
+      const b = new T.Mesh(new T.BoxGeometry(0.92, 0.34, 0.92), base); b.position.set(q.x, yBase + 0.17, q.y); w.add(b);
+      const pin = new T.Mesh(new T.BoxGeometry(0.25, 0.75, 0.25), oro); pin.position.set(q.x, yBase + 0.52, q.y); w.add(pin);
+    });
+    const lados = { u: 'arriba', d: 'abajo', l: 'izq', r: 'der' };
+    w.add(this.rotulosProto(V, D.w, D.h, D.pins.map(q => ({ x: q.x, y: q.y, label: q.label, lado: lados[q.lp] || 'arriba' })), yBase + 0.36));
+    // Pantallas: la imagen del programa se ve en la pantalla del modelo
+    const zonas = { LCD: [3.6, 3.0, 25.6, 8], OLED: [0.9, 2.8, 9.2, 4.6] };
+    if (zonas[p.k]) {
+      const pant = this.buscarInfo(m, p.k === 'LCD' ? 'Pantalla LCD 16×2' : 'Pantalla OLED');
+      const calcoPant = pant && pant.children.find(o => o.userData.calco);
+      if (calcoPant) {
+        w.updateMatrixWorld(true);
+        const bb = new T.Box3().setFromObject(calcoPant), sz = bb.getSize(new T.Vector3()), cc = bb.getCenter(new T.Vector3());
+        const e = this.modTexture(p), pad = 14, Wp = mm(D.w) + 2 * pad, Hp = mm(D.h) + 2 * pad, [zx, zy, zw, zh] = zonas[p.k];
+        const u0 = (mm(zx) + pad) / Wp, u1 = (mm(zx + zw) + pad) / Wp, v1 = 1 - (mm(zy) + pad) / Hp, v0 = 1 - (mm(zy + zh) + pad) / Hp;
+        const geo = new T.PlaneGeometry(sz.x, sz.z); geo.setAttribute('uv', new T.Float32BufferAttribute([u0, v1, u1, v1, u0, v0, u1, v0], 2));
+        const mat = new T.MeshStandardMaterial({ map: e.tex, emissive: 0xffffff, emissiveMap: e.tex, emissiveIntensity: 0, roughness: 0.3 });
+        const plano = new T.Mesh(geo, mat); plano.rotation.x = -Math.PI / 2; plano.position.set(cc.x, bb.max.y + 0.01, cc.z);
+        calcoPant.visible = false; w.add(plano); w.userData.ownMat = mat;
+      }
+    }
+    // Servo: el brazo gira con el ángulo que pide el programa
+    if (p.k === 'SERVO') {
+      const brazo = this.buscarInfo(m, 'Brazo (horn)');
+      if (brazo) { const piv = new T.Group(); piv.position.set(5.5, 0, 0); brazo.position.x -= 5.5; m.add(piv); piv.add(brazo); w.userData.horn = piv; const st = Proto.modSt[p.id], ang = st && st.ok && st.dev && st.dev.state ? st.dev.state.angle : 90; piv.rotation.y = -(ang - 90) * Math.PI / 180; }
+    }
+    this.altaCache[p.id] = w;
+    return w;
+  },
+  liberarAlta(w) {
+    w.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []).forEach(mt => { if (mt === this.mats.header || mt === this.mats.standoff || mt === this.mats.hdrhole || mt === this.mats.pinoro) return; ['map', 'emissiveMap'].forEach(t => { if (mt[t] && !Object.values(this.modTexs || {}).some(e => e.tex === mt[t])) mt[t].dispose(); }); mt.dispose(); });
+    });
+  },
+  limpiarAlta(todo) {
+    Object.entries(this.altaCache).forEach(([clave, w]) => {
+      const sigue = !todo && (clave.startsWith('mcu:') ? Proto.parts.some(p => 'mcu:' + p.k === clave) : Proto.parts.some(p => p.id === clave && p.k === w.userData.k));
+      if (!sigue) { if (w.parent) w.parent.remove(w); this.liberarAlta(w); delete this.altaCache[clave]; }
+    });
+    if (todo) this._altaV = undefined;
+  },
+
   buildMod(p, g) {
     const T = THREE, D = MOD_DEFS[p.k], pad = 14 / MOD_P, y0 = mcuY0(), x = p.at[0] - 32, z = y0 + p.at[1] - 8;
+    const alta = this.modAlta(p, D);
+    if (alta) { alta.position.set(x, 0, z); alta.userData.id = p.id; alta.userData.modK = p.k; alta.userData.mid = new T.Vector3(x + D.w / 2, 0, z + D.h / 2); return alta; }
     const e = this.modTexture(p);
     const mat = new T.MeshStandardMaterial({ map: e.tex, transparent: true, roughness: 0.75, alphaTest: 0.05, envMapIntensity: 0.2, emissive: 0xffffff, emissiveMap: e.tex, emissiveIntensity: 0 });
     const top = new T.Mesh(new T.PlaneGeometry(D.w + 2 * pad, D.h + 2 * pad), mat); top.rotation.x = -Math.PI / 2; top.position.set(x + D.w / 2, 0.82, z + D.h / 2); g.add(top);
@@ -7317,7 +7461,8 @@ const Proto3D = Object.assign(Object.create(View3D), {
       this.boardGrp = this.makeBoard(); this.scene.add(this.boardGrp); this.needFit = true;
     }
     if (this.needFit) { this.needFit = false; this.fit(this.cam.phi > 0.3 ? 0.62 : this.cam.phi, (Proto.boards || 1) === 1); }
-    this.parts.children.slice().forEach(c => { this.parts.remove(c); this.disposeGroup(c); if (c.userData.ownMat) c.userData.ownMat.dispose(); });
+    this.parts.children.slice().forEach(c => { this.parts.remove(c); if (c.userData.altaCache) return; this.disposeGroup(c); if (c.userData.ownMat) c.userData.ownMat.dispose(); });   // los modelos de alta calidad se reutilizan
+    this.limpiarAlta(false);
     this.smoke = [];
     this.wireGrp = null;
     Proto.parts.forEach(p => { try { this.parts.add(this.buildPart(p)); } catch (e) { console.error('3D', p.id, e); } });

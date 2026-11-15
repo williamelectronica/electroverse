@@ -83,7 +83,7 @@
 
     /* ----- Geometrías básicas ----- */
     F.caja = (w, h, d, mat, r = 0) => {
-      const g = (r > 0 && Q.redondeo) ? new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2)) : new T.BoxGeometry(w, h, d);
+      const g = (r > 0 && Q.redondeo && RoundedBoxGeometry) ? new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2)) : new T.BoxGeometry(w, h, d);
       return new T.Mesh(g, mat);
     };
     F.cil = (r1, r2, h, mat, seg = Q.seg, abierto = false) => new T.Mesh(new T.CylinderGeometry(r1, r2, h, seg, 1, abierto), mat);
@@ -107,7 +107,7 @@
       ctx.scale(cv.width / w, cv.height / d);
       dibujar(ctx, w, d);
       const tex = new T.CanvasTexture(cv);
-      tex.colorSpace = T.SRGBColorSpace;
+      if (T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace; else tex.encoding = T.sRGBEncoding;   // Three r160 o r128 (protoboard)
       tex.anisotropy = V.aniso;
       return tex;
     };
@@ -779,6 +779,18 @@
       if (V.pmrem) V.pmrem.dispose();
       if (V.r) { V.r.dispose(); V.r.forceContextLoss(); }
       if (V.contenedor) V.contenedor.innerHTML = '';
+    },
+
+    /* La protoboard 3D usa su propio Three.js (r128). Con esto puede pedir la misma fábrica
+       de piezas y los mismos modelos de la Biblioteca, construidos con SU versión de Three. */
+    fabricaExterna(T, calidad, opciones = {}) {
+      const V = {
+        T, lib: { T, RoundedBoxGeometry: opciones.RoundedBoxGeometry || null },
+        q: CALIDAD[calidad] || CALIDAD.media, aniso: opciones.aniso || 4,
+        infoPin: opciones.infoPin || (e => ({ nombre: e && typeof e === 'object' ? e.n : e }))
+      };
+      V.F = crearFabrica(V);
+      return V;
     },
 
     // Para las pruebas: cuántos cuadros se dibujaron y cuánto tardó cada uno
