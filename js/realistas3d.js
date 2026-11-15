@@ -175,6 +175,98 @@
     g.userData.mid = o;
   };
 
+  /* ===================== DISPLAY DE 7 SEGMENTOS ===================== */
+  // Cada segmento es una barra hexagonal inclinada (como en un display real) que se enciende en rojo
+  function barra(largo, grosor) {
+    const THREE = T(), s = new THREE.Shape(), l = largo / 2, t = grosor / 2;
+    s.moveTo(-l, 0); s.lineTo(-l + t, -t); s.lineTo(l - t, -t); s.lineTo(l, 0); s.lineTo(l - t, t); s.lineTo(-l + t, t); s.lineTo(-l, 0);
+    return new THREE.ExtrudeGeometry(s, { depth: 0.06, bevelEnabled: false });
+  }
+  R.SEG7 = (pb, g, p, c) => {
+    const THREE = T(), cc = c.center(), W = 5.4, Dp = 7.4, y0 = 0.4, H = 1.6;
+    pb.pinLegs(g, c.P, 0.4, cc);
+    const cuerpo = malla(cajaRedonda(W, H, Dp, 0.12), pb.mat('r_segblanco', { color: 0xeeeeea, roughness: 0.55 })); cuerpo.position.copy(cc).setY(y0); g.add(cuerpo);
+    const cara = malla(new THREE.BoxGeometry(W - 0.25, 0.04, Dp - 0.25), pb.mat('r_segcara', { color: 0x141518, roughness: 0.35, metalness: 0.1 })); cara.position.copy(cc).setY(y0 + H + 0.02); g.add(cara);
+    const L = 4.7, w = 2.5, t = 0.46, gap = 0.1, k = 0.11, yTop = y0 + H + 0.05, segs = {};
+    const def = { a: [0, -L / 2, w - gap, 0], g: [0, 0, w - gap, 0], d: [0, L / 2, w - gap, 0], f: [-w / 2, -L / 4, L / 2 - gap, 1], b: [w / 2, -L / 4, L / 2 - gap, 1], e: [-w / 2, L / 4, L / 2 - gap, 1], c: [w / 2, L / 4, L / 2 - gap, 1] };
+    const ox = cc.x - 0.35, oz = cc.z;
+    Object.entries(def).forEach(([n, [x, z, largo, vert]]) => {
+      const geo = barra(largo, t);
+      geo.rotateX(Math.PI / 2);                 // la barra queda acostada (grosor hacia arriba)
+      if (vert) geo.rotateY(Math.PI / 2);
+      geo.translate(x, 0, z);
+      const pos = geo.attributes.position; for (let i = 0; i < pos.count; i++) pos.setX(i, pos.getX(i) - pos.getZ(i) * k);   // inclinación itálica
+      pos.needsUpdate = true; geo.computeVertexNormals();
+      const m = propio({ color: 0x3a1010, emissive: 0xff2a2a, emissiveIntensity: 0, roughness: 0.4 });
+      const seg = malla(geo, m, true); seg.position.set(ox, yTop + 0.06, oz); g.add(seg); segs[n] = m;
+    });
+    const dpm = propio({ color: 0x3a1010, emissive: 0xff2a2a, emissiveIntensity: 0, roughness: 0.4 });
+    const dp = malla(new THREE.CylinderGeometry(0.27, 0.27, 0.06, 20), dpm, true); dp.position.set(ox + w / 2 + 0.55 - (L / 2) * k, yTop + 0.03, oz + L / 2); g.add(dp); segs.dp = dpm;
+    g.userData.segs = segs; g.userData.mid = cc;
+  };
+
+  /* ===================== DIP SWITCH DE 4 ===================== */
+  R.DIPSW = (pb, g, p, c) => {
+    const THREE = T(), cc = c.center(), W = 4.6, D = 2.7, y0 = 0.4, H = 0.95;
+    pb.pinLegs(g, c.P, 0.7, cc);
+    const cuerpo = malla(cajaRedonda(W, H, D, 0.12), pb.mat('r_dip', { color: 0x1f5fc9, roughness: 0.4 })); cuerpo.position.copy(cc).setY(y0); g.add(cuerpo);
+    const top = plano(W - 0.1, D - 0.1, propio({ map: tex(W - 0.1, D - 0.1, (k2, w, h) => {
+      texto(k2, 'ON', 0.45, 0.32, 0.32, '#ffffff', { peso: 900 });
+      k2.strokeStyle = '#ffffff'; k2.lineWidth = 0.07; k2.beginPath(); k2.moveTo(0.95, 0.5); k2.lineTo(0.95, 0.15); k2.moveTo(0.82, 0.28); k2.lineTo(0.95, 0.15); k2.lineTo(1.08, 0.28); k2.stroke();
+      [0, 1, 2, 3].forEach(i => texto(k2, String(i + 1), (c.P[i].x - cc.x) + w / 2, h - 0.3, 0.28, '#ffffff', { peso: 800 }));
+    }), transparent: true, roughness: 0.4 }));
+    top.rotation.x = -Math.PI / 2; top.position.copy(cc).setY(y0 + H + 0.005); g.add(top);
+    (p.on || []).forEach((on, i) => {
+      const x = c.P[i] ? c.P[i].x : cc.x - 1.5 + i;
+      const ranura = malla(new THREE.BoxGeometry(0.56, 0.06, 1.35), pb.mat('r_ranura', { color: 0x0b0c0e, roughness: 0.9 })); ranura.position.set(x, y0 + H + 0.01, cc.z); g.add(ranura);
+      const palanca = malla(cajaRedonda(0.44, 0.34, 0.58, 0.08), pb.mat('r_palanca', { color: 0xf4f4f2, roughness: 0.45 }));
+      palanca.position.set(x, y0 + H - 0.02, cc.z + (on ? -0.36 : 0.36)); g.add(palanca);
+    });
+    g.userData.mid = cc;
+  };
+
+  /* ===================== PULSADOR (TÁCTIL 6 × 6 mm) ===================== */
+  R.BTN = (pb, g, p, c) => {
+    const THREE = T(), cc = c.center(), S = 2.4, y0 = 0.3;
+    pb.pinLegs(g, c.P, 0.55, cc);
+    const cuerpo = malla(cajaRedonda(S, 0.9, S, 0.1), negro(pb)); cuerpo.position.copy(cc).setY(y0); g.add(cuerpo);
+    const placa = malla(new THREE.BoxGeometry(S, 0.07, S), metal(pb)); placa.position.copy(cc).setY(y0 + 0.94); g.add(placa);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => { const p2 = malla(new THREE.BoxGeometry(0.4, 0.45, 0.06), metal(pb)); p2.position.copy(cc).add(new THREE.Vector3(sx * (S / 2 - 0.4), y0 + 0.72, sz * (S / 2 + 0.02))); g.add(p2); });
+    const anillo = malla(new THREE.CylinderGeometry(0.82, 0.82, 0.1, 30), negro(pb)); anillo.position.copy(cc).setY(y0 + 1.02); g.add(anillo);
+    const cap = malla(new THREE.CylinderGeometry(0.66, 0.7, 0.55, 30), pb.mat('r_capboton', { color: 0x23262d, roughness: 0.6 }));
+    g.userData.capY = [y0 + 1.33, y0 + 1.2]; cap.position.copy(cc).setY(g.userData.capY[p.on ? 1 : 0]); g.add(cap);
+    g.userData.cap = cap; g.userData.mid = cc;
+  };
+
+  /* ===================== INTERRUPTOR DESLIZANTE ===================== */
+  R.SLIDE = (pb, g, p, c) => {
+    const THREE = T(), cc = c.P[1].clone(), horiz = Math.abs(c.P[0].z - c.P[2].z) < 0.01, y0 = 0.45;
+    pb.pinLegs(g, c.P, 0.5);
+    const grupo = new THREE.Group(); grupo.position.copy(cc); if (!horiz) grupo.rotation.y = Math.PI / 2; g.add(grupo);
+    const base = malla(new THREE.BoxGeometry(3.4, 0.3, 1.35), negro(pb)); base.position.y = y0 + 0.15; grupo.add(base);
+    const caja = malla(new THREE.BoxGeometry(3.4, 1.0, 1.35), metal(pb)); caja.position.y = y0 + 0.8; grupo.add(caja);
+    [-1, 1].forEach(s => { const oreja = malla(new THREE.BoxGeometry(0.5, 0.06, 1.35), metal(pb)); oreja.position.set(s * 2.0, y0 + 0.33, 0); grupo.add(oreja); const hueco = malla(new THREE.CylinderGeometry(0.15, 0.15, 0.07, 12), pb.mat('r_ranura', { color: 0x0b0c0e, roughness: 0.9 })); hueco.position.set(s * 2.0, y0 + 0.34, 0); grupo.add(hueco); });
+    const ranura = malla(new THREE.BoxGeometry(1.6, 0.04, 0.5), pb.mat('r_ranura', { color: 0x0b0c0e, roughness: 0.9 })); ranura.position.y = y0 + 1.31; grupo.add(ranura);
+    const perilla = malla(cajaRedonda(0.55, 0.9, 0.5, 0.08), negro(pb)); perilla.position.set(p.pos ? 0.5 : -0.5, y0 + 1.25, 0); grupo.add(perilla);
+    g.userData.mid = cc;
+  };
+
+  /* ===================== ZUMBADOR ACTIVO ===================== */
+  R.BUZ = (pb, g, p, c) => {
+    const THREE = T(), M = c.A.clone().add(c.B).multiplyScalar(0.5), y0 = 0.45, r = 2.3, H = 3.0;
+    pb.roundLegs(g, [c.A, c.B], pb.legTargets(c.A, c.B, M, y0, 0.6));
+    const cuerpo = malla(new THREE.CylinderGeometry(r, r, H, 48), pb.mat('r_buz', { color: 0x141518, roughness: 0.3, metalness: 0.1 })); cuerpo.position.copy(M).setY(y0 + H / 2); g.add(cuerpo);
+    const borde = malla(new THREE.TorusGeometry(r - 0.08, 0.08, 8, 48), pb.mat('r_buz', { color: 0x141518, roughness: 0.3, metalness: 0.1 })); borde.rotation.x = Math.PI / 2; borde.position.copy(M).setY(y0 + H); g.add(borde);
+    const top = plano(r * 1.9, r * 1.9, propio({ map: tex(r * 1.9, r * 1.9, (k2, w, h) => {
+      k2.fillStyle = '#ece9e1'; k2.beginPath(); k2.arc(w / 2, h / 2, w * 0.36, 0, 7); k2.fill();
+      k2.fillStyle = '#050505'; k2.beginPath(); k2.arc(w / 2, h / 2, w * 0.07, 0, 7); k2.fill();
+      texto(k2, '+', w * 0.24, h * 0.24, h * 0.16, '#d9dde3', { peso: 900 });
+      texto(k2, 'ZUMBADOR', w / 2, h * 0.64, h * 0.055, '#3a3d44', { peso: 800 }); texto(k2, '5 V', w / 2, h * 0.72, h * 0.055, '#3a3d44', { peso: 800 });
+    }), transparent: true, roughness: 0.5 }));
+    top.rotation.x = -Math.PI / 2; top.position.copy(M).setY(y0 + H + 0.01); g.add(top);
+    g.userData.mid = M;
+  };
+
   window.PB_REAL = R;
   window.PB_REAL_AYUDA = { tex, propio, malla, texto, cajaRedonda, plano, cable, metal, negro };
 })();

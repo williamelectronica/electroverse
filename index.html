@@ -1249,7 +1249,7 @@ onmessage = async (ev) => {
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
 <script src="js/visor3d.js?v=13.0.3"></script>
 <script src="js/modelos3d.js?v=13.0.3"></script>
-<script src="js/realistas3d.js?v=13.0.4"></script>
+<script src="js/realistas3d.js?v=13.0.5"></script>
 <script>
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
 (function (root) {
@@ -7676,7 +7676,7 @@ const Proto3D = Object.assign(Object.create(View3D), {
       if (g.userData.segs) Object.entries(g.userData.segs).forEach(([s, m]) => { const rr = res && res[id + '.' + s]; m.emissiveIntensity = rr && rr.i > 5e-4 ? 1.4 : 0; m.color.set(rr && rr.i > 5e-4 ? 0xff5040 : 0x3a1010); });
       if (g.userData.mcuLed) { const R = Proto.mcuRT, on = R && R.on && (R.levels[g.userData.mcuLed.pin] || 0) > 0.05; g.userData.mcuLed.mat.emissiveIntensity = on ? 1.8 : 0.05; }
       if (g.userData.spinner) { const p = Proto.part(id); g.userData.spin = r ? clamp(r.v / ((p && +p.vr) || 6), -2, 2) * 25 : 0; }
-      if (g.userData.cap) { const p = Proto.part(id); if (p) { g.userData.cap.position.y = p.on ? 1.45 : 1.65; g.userData.cap.material = this.mat(p.on ? 'btncapon' : 'btncap', { color: p.on ? 0x22e5ff : 0x3b3e45, roughness: 0.6 }); } }
+      if (g.userData.cap) { const p = Proto.part(id); if (p) { if (g.userData.capY) g.userData.cap.position.y = g.userData.capY[p.on ? 1 : 0]; else { g.userData.cap.position.y = p.on ? 1.45 : 1.65; g.userData.cap.material = this.mat(p.on ? 'btncapon' : 'btncap', { color: p.on ? 0x22e5ff : 0x3b3e45, roughness: 0.6 }); } } }
     });
     this.request();
   },
