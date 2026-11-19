@@ -1,7 +1,7 @@
 # ELECTROVERSE — Prompt maestro
 
-> Descripción completa de la aplicación **tal como está en la v12** (etiqueta `v12.0.0`).
-> Sirve para reconstruir o continuar la app en el futuro. Se actualizará al cerrar la v13.
+> Descripción completa de la aplicación **tal como está en la v13** (etiqueta `v13.0.0`).
+> Sirve para reconstruir o continuar la app en el futuro. La descripción de la v12 está en el historial de Git (`v12.0.0`) y en `docs/AUDITORIA_V12.md`.
 
 ---
 
@@ -9,130 +9,137 @@
 
 | Campo | Valor |
 |---|---|
-| Nombre | **ELECTROVERSE** (título de la pestaña: "Electroverse Lab") |
+| Nombre | **ELECTROVERSE** (pestaña: "Electroverse v13 · Laboratorio de electrónica") |
 | Subtítulo | Laboratorio de electrónica |
 | Autor | Prof. William Dextre — I.E. Industrial "Japón", Llata, Huánuco, Perú |
-| Versión | v12 (la portada todavía dice "versión 2027 (fase 2)") |
+| Versión | **13.0.0** (constante `EV_VERSION` en `index.html`; se muestra en Inicio, Estructura y Ajustes) |
 | Público | Docentes y estudiantes de secundaria (13 a 17 años), institutos y universidades del Perú |
 | Idioma | Todo en español, con lenguaje sencillo y analogías cotidianas |
-| Objetivo | Aprender, simular y programar electrónica real sin necesitar componentes físicos: circuitos en esquema y en protoboard (2D y 3D), Arduino y ESP32 con IoT, lecciones, tutor con IA y aulas para el docente |
+| Objetivo | Aprender, simular y programar electrónica real sin componentes físicos: esquemas y protoboard (2D y 3D), Arduino y ESP32 con IoT, biblioteca de componentes con modelos 3D, lecciones, tutor de electrónica por niveles y aulas para el docente |
 
 ## 2. Tecnología
 
-- **Un solo archivo `index.html`** (≈757 KB, ≈8 950 líneas) con HTML, CSS y JavaScript puro (sin frameworks ni compilación).
-- **Simulador de circuitos propio** (análisis nodal modificado, MNA): régimen DC y transitorio, modelos de componentes con valores de hojas de datos, lógica digital mixta (compuertas que manejan LEDs y viceversa) y tabla de verdad automática.
-- **Intérprete de Arduino propio**: compila un subconjunto de C++ a JavaScript y lo ejecuta en un **Web Worker** (código fuente en `<script id="ard-worker-src">`), con pausas en cada bucle para que la página nunca se congele. Emula las librerías más usadas: Servo, LiquidCrystal / LiquidCrystal_I2C, DHT, Adafruit_SSD1306, Adafruit_NeoPixel, MFRC522, Adafruit_BME280, HX711, OneWire / DallasTemperature, WiFi, WiFiClient(Secure) y PubSubClient.
-- **3D**: Three.js **r128**, con carga diferida desde cdnjs (≈600 KB, solo al abrir la vista 3D). `WebGLRenderer`, `MeshStandardMaterial`, `HemisphereLight` + `DirectionalLight`, texturas de texto con `CanvasTexture`, órbita de cámara programada a mano (sin OrbitControls), pellizco y dos dedos en celular, liberación de memoria (`dispose`) al salir.
-- **Esquemas y protoboard 2D**: SVG generado por código.
-- **Fuentes**: Google Fonts (Atkinson Hyperlegible para el texto, Chakra Petch para títulos, JetBrains Mono para código y números).
-- **Guardado**: `localStorage` con espacio de nombres `ev1:` por perfil. Dentro de Claude también usa las capacidades del artefacto (`window.claude.use('user' | 'db' | 'sample' | 'room')`) para la cuenta, la nube, el tutor IA y el broker MQTT de la clase. Fuera de Claude pasa solo a modo local.
-- **Diagramas**: Mermaid (lo inyecta el entorno de Claude; se usa solo en la sección Estructura).
+- **Página principal `index.html`** (≈870 KB, ≈10 400 líneas) con HTML, CSS y JavaScript puro, sin frameworks ni compilación. Desde la v13 tiene archivos de apoyo:
+
+| Archivo | Contenido |
+|---|---|
+| `data/componentes.js` | `window.EV_DATA`: 63 componentes (7 placas, 17 sensores, 10 actuadores, 6 de comunicación, 7 de visualización, 1 de alimentación, 5 básicos, 10 circuitos integrados) con pinout, datos eléctricos, conexión con UNO/ESP32, código de ejemplo y errores comunes |
+| `data/tutor.js` | `window.EV_TUTOR`: base de conocimiento del tutor (4 niveles, 26 temas, 27 generadores de ejercicios, 7 diagramas con preguntas, instrucciones del agente y buscador sin internet) |
+| `js/visor3d.js` | `window.Visor3D`: visor 3D de la Biblioteca (Three.js r160) y fábrica de piezas compartida con la protoboard (`fabricaExterna`) |
+| `js/modelos3d.js` | Modelos 3D de cada componente (recetas por id y por categoría) |
+| `js/realistas3d.js` | `window.PB_REAL`: modelos realistas de piezas de protoboard (batería 9 V, portapilas, fuente, motor, display 7 segmentos, DIP switch, pulsador, interruptor, zumbador, capacitores, chips DIP) |
+| `libs/` | Librerías copiadas para funcionar **sin internet** (ver abajo) |
+
+- **Simulador de circuitos propio** (análisis nodal modificado, MNA): DC y transitorio, modelos con datos de hojas de datos, lógica digital mixta y tabla de verdad automática.
+- **Intérprete de Arduino propio**: compila un subconjunto de C++ a JavaScript y lo ejecuta en un **Web Worker** (`<script id="ard-worker-src">`). Emula Servo, LiquidCrystal(_I2C), DHT, SSD1306, NeoPixel, MFRC522, BME280, HX711, OneWire/DallasTemperature, WiFi y PubSubClient.
+- **3D**:
+  - Esquemas y Protoboard: Three.js **r128** clásico (`libs/three-r128/three.min.js`, CDN como respaldo), carga diferida.
+  - Biblioteca: Three.js **r160** como módulo ES mediante `importmap` (`libs/three-r160/`) con OrbitControls, RoomEnvironment y RoundedBoxGeometry. Si la página se abre con doble clic (`file://`) o los módulos fallan, usa r128 de `libs/` (también se fuerza con `?r128` en la dirección).
+  - Materiales PBR, luz de entorno (PMREM), tone mapping ACES, texturas de texto con `CanvasTexture` (píxeles por mm: Alta 36, Media 26, Baja 12), pines con `InstancedMesh`, dibujo solo cuando algo cambia y redibujo nítido (hasta 2×) al quedarse quieto.
+  - Protoboard: los modelos de alta calidad se guardan en caché y sus piezas fijas se **fusionan por material** (`Proto3D.fusionar`) para dibujar rápido.
+- **Esquemas y protoboard 2D**: SVG generado por código. Esquemas con zoom por `viewBox` (`EsqZoom`).
+- **Fuentes**: Atkinson Hyperlegible (texto), Chakra Petch (títulos), JetBrains Mono (código), copiadas en `libs/fonts/` (subconjunto latino, licencia SIL OFL).
+- **Diagramas**: Mermaid 11.4.1 en `libs/mermaid/`, dibujado con `dibujarMermaid(cont)` (sección Estructura y respuestas del tutor).
+- **Guardado**: `localStorage` con prefijo `ev1:` por perfil. Dentro de Claude también usa las capacidades del artefacto (`window.claude`) para cuenta, nube, tutor IA y broker MQTT de la clase.
+- **IA del tutor**: dentro de Claude, `Store.sample`; fuera de Claude, SDK oficial `@anthropic-ai/sdk` 1.4.0 (jsDelivr, solo con internet) con la clave de API que pega el docente, modelo `claude-opus-5-5` y respaldo del servidor (`fallbacks: "default"`).
 
 ## 3. Estilo visual
 
-- Concepto: **"laboratorio holográfico"**. Paneles de vidrio translúcido (`backdrop-filter: blur`) sobre una rejilla de puntos tipo protoboard en penumbra. El color aparece solo donde hay voltaje.
-- Tema oscuro por defecto, con tema claro (sigue al sistema o se elige con un botón). Colores en variables CSS: cian `#22e5ff` (acento), violeta, magenta, lima (voltaje positivo), ámbar (corriente), verde OK, ámbar aviso, rojo error.
-- Iconos SVG propios con trazos de electrónica.
-- Estudio a pantalla completa en Esquemas y Protoboard: barra superior, categorías a la izquierda, instrumentos a la derecha y paneles flotantes. El banco de trabajo es oscuro, con cuadrícula de laboratorio.
-- **Iluminación del espacio**: Día / Taller / Noche (los LED y pantallas brillan más en la oscuridad).
-- **Calidad 3D**: Automática / Alta.
-- **Rendimiento adaptable**: mide los FPS y, si bajan de 42, activa "efectos ligeros" (quita los desenfoques).
-- **Accesibilidad**: tamaño de letra ajustable, movimiento reducido, foco visible y etiquetas `aria`.
-- **Celular**: navegación inferior, botones de 36 px o más, 3D con pellizco.
+- Concepto **"laboratorio holográfico"**: paneles de vidrio sobre una rejilla tipo protoboard en penumbra; el color aparece donde hay voltaje.
+- Tema oscuro por defecto y tema claro. Colores en variables CSS (cian `#22e5ff`, violeta, magenta, lima, ámbar…).
+- Iluminación del espacio Día / Taller / Noche; calidad 3D Alta / Media / Baja (baja sola en equipos lentos).
+- Accesibilidad: letra ajustable, movimiento reducido, foco visible, etiquetas `aria`.
+- Diálogos propios (`preguntar()`) en lugar de `confirm()`, que está bloqueado dentro de Claude.
 
 ## 4. Navegación (rutas con `#`)
 
 | Ruta | Sección | Notas |
 |---|---|---|
-| `#inicio` | Inicio | Portada, estadísticas de avance y accesos rápidos |
-| `#lab` | **Esquemas** | Laboratorio de esquemas (2D, 3D o ambas) |
-| `#proto` | **Protoboard** | Protoboard de 830 puntos con placas de microcontrolador |
-| `#arduino` | **Arduino** | Editor, simulación de placa, monitor serie, plotter, módulos, IoT y USB |
-| `#aprender` / `#leccion-lN` | Aprender | Lecciones con visualizaciones, quiz y reto |
-| `#tutor` | Tutor IA | Chat que recibe el contexto del circuito o del código |
-| `#aulas` | Aulas | Solo escritorio. El docente crea aulas con código; los estudiantes envían su avance (código EV1) |
-| `#estructura` | Estructura | Solo escritorio. Documento del proyecto: módulos, arquitectura objetivo, hoja de ruta y control de calidad |
-| `#ajustes` | Ajustes | Solo escritorio. Perfil, tema, letra, efectos, cerrar sesión o cambiar de perfil |
-
-**Puerta de entrada**: al abrir la app se pide sesión o perfil local, el rol (estudiante o docente) y el consentimiento de privacidad. Solo se guarda un id opaco y un alias (Ley N.º 29733).
+| `#inicio` | Inicio | Portada, avance y accesos rápidos |
+| `#lab` | **Esquemas** | Esquemas 2D/3D con zoom, lectura de conexiones y exportación |
+| `#proto` | **Protoboard** | 830 puntos, 4 placas programables, 101 piezas, vista 2D y 3D |
+| `#arduino` | **Arduino** | Editor, simulación, monitor serie, plotter, módulos, IoT y USB |
+| `#biblioteca` / `#biblioteca-<id>` | **Biblioteca** | Fichas de los 63 componentes con 3D, pinout, conexión y código |
+| `#aprender` / `#leccion-lN` | Aprender | Lecciones con visualización, quiz y reto |
+| `#tutor` | **Tutor IA** | Agente de electrónica: Chat, Ruta, Ejercicios y Leer diagramas |
+| `#aulas` | Aulas | El docente crea aulas; los estudiantes envían su avance (código EV1) |
+| `#estructura` | Estructura | Documento del proyecto y "Acerca de esta versión" |
+| `#ajustes` | Ajustes | Perfil, tema, letra, efectos |
 
 ## 5. Secciones en detalle
 
-### 5.1 Esquemas (`VIEWS.lab`, objeto `Lab`)
-- Rejilla SVG (`#board`, `viewBox` fijo `0 0 W_BOARD H_BOARD`) donde se colocan componentes y cables entre puntos.
-- Herramientas: seleccionar, cable, componentes, punta roja/negra del multímetro, canales 1 y 2 del osciloscopio, girar (R), deshacer y rehacer (Ctrl+Z / Ctrl+Y) y guardar.
-- Plantillas: LED con resistencia, divisor de voltaje, carga y descarga RC, filtro RC pasa bajos, rectificador de media onda, LEDs en paralelo, lienzo vacío, más plantillas de semiconductores, integrados y lógica digital. También "Mis circuitos" guardados.
-- Simulación en vivo: colores según voltaje, animación del flujo de corriente, componentes quemados con humo y marca roja.
-- Instrumentos: multímetro (V, A, Ω, W) y osciloscopio de 2 canales (tiempo/div y V/div). Paneles de Propiedades y Diagnóstico (avisos, tabla de verdad, botón "Tutor").
-- Vistas: 2D, 3D, o 3D + 2D (el 3D lo maneja `View3D`).
-- **No tiene zoom**: el SVG ocupa el 100 % del ancho (mínimo 640 px) dentro de un contenedor con barra de desplazamiento. No hay manejo de rueda ni de pellizco, y el `viewBox` nunca cambia.
+### 5.1 Esquemas (`Lab`, `VIEWS.lab`, `EsqZoom`)
+- Rejilla SVG con componentes, cables, multímetro y osciloscopio de 2 canales; simulación en vivo con colores de voltaje y animación de corriente.
+- **Zoom profesional**: rueda, pellizco, arrastre, teclas (+, −, 0), ajustar al circuito y minimapa.
+- **Lectura de conexiones**: redes calculadas (union-find), colores por red, "seguir una conexión" y tabla de conexiones copiable.
+- **Exportar** PNG y SVG, e **imprimir** en A4 horizontal.
+- Botón **Nuevo** (vacía el lienzo; Ctrl+Z lo recupera).
 
-### 5.2 Protoboard (`VIEWS.proto`, objeto `Proto`)
-- Protoboard de 830 puntos (columnas de 5 huecos conectadas, rieles + y − a lo largo), una o varias placas.
-- Bandeja de componentes por categorías, cables de colores, piezas arrastrables (pieza completa, una sola pata o un módulo).
-- Placas de microcontrolador sobre la mesa (UNO y ESP32 DevKit dibujados con su pinout), con código propio que se puede pasar al laboratorio Arduino.
-- Montajes de ejemplo, puntas de medición y conversión del montaje al circuito del simulador.
-- Vista superior SVG con botones − / + (zoom simple de 1× a 3× cambiando el ancho) y vista 3D (`Proto3D`).
+### 5.2 Protoboard (`Proto`, `VIEWS.proto`, `Proto3D`)
+- Protoboard de 830 puntos, bandeja por categorías (incluye Comunicación), cables de colores, piezas arrastrables.
+- **Placas programables**: Arduino UNO, Arduino Nano (motor del UNO), ESP32 DevKit y ESP32 DevKit de 38 pines (motor del ESP32). `MCU_DEFS[k].board` indica qué motor usa.
+- **55 módulos** (`MOD_DEFS`): los de la v12 más 27 generados desde `EV_DATA` (`generarModulosBib`), entre ellos DHT22, MPU-6050, L298N, HC-05, GPS, DS3231, Mega, ESP32-CAM y ESP32-S3. Los nuevos se colocan, se cablean y consumen corriente; el programa todavía no los controla.
+- **3D**: placas y módulos con los modelos de la Biblioteca (`modAlta`, `mcuAlta`), pantallas LCD/OLED en vivo, brazo del servo que gira, piezas realistas de `PB_REAL`, rótulos de pines nítidos.
+- Botón **Nuevo** (vacía la mesa; Ctrl+Z lo recupera).
 
-### 5.3 Arduino (`VIEWS.arduino`, objeto `Ard`)
-- Placas: **Arduino UNO** (lógica de 5 V, ADC de 10 bits, PWM en 3, 5, 6, 9, 10 y 11, LED en 13) y **ESP32 DevKit** (3,3 V, ADC de 12 bits, Wi-Fi, LED en 2, aviso de ADC2).
-- Editor con resaltado de sintaxis, números de línea y lista de errores en español.
-- Ejemplos: Blink, Semáforo, Potenciómetro → brillo PWM, Pulsador enciende LED, Secuencia de luces, LDR con alarma, Termómetro LM35 + plotter, y Programa con errores para practicar.
-- Simulación: LEDs por pin, pulsador, entradas analógicas y digitales configurables por placa, monitor serie, plotter, sonido del buzzer.
-- Módulos visuales: LCD 16x2, OLED, NeoPixel, buzzer pasivo, servo, relé, ultrasónico, DHT, BME280, DS18B20, HX711, RFID, joystick, teclado, final de carrera, reed, ACS712 y sensor de voltaje.
-- **IoT**: Wi-Fi simulado (solo ESP32), broker MQTT de la clase y panel IoT con tarjetas y minigráficas.
-- **Placa real por USB** (Web Serial): monitor y plotter con Arduino o ESP32 reales. Solo en la versión instalable, con Chrome o Edge.
+### 5.3 Arduino (`Ard`, `VIEWS.arduino`)
+- UNO (5 V, ADC 10 bits) y ESP32 (3,3 V, ADC 12 bits, Wi-Fi); editor con errores en español; ejemplos; módulos visuales; IoT con MQTT simulado; placa real por Web Serial (versión instalable).
 
-### 5.4 Aprender (`LESSONS`, `Viz`)
-- Lecciones: Voltaje, corriente y resistencia · Ley de Ohm · El LED y su resistencia · El capacitor y la constante de tiempo · Arduino: salidas digitales.
-- Cada lección trae explicación, analogía, fórmula, visualización interactiva, quiz y un **reto** que abre una plantilla en Esquemas o un ejemplo en Arduino. Hay insignias (`BADGES`) por avance.
+### 5.4 Biblioteca (`Biblio`, `VIEWS.biblioteca`)
+- Buscador y filtros por categoría. Ficha con vista 3D (etiquetas, vista explosionada, pinout, calidad), datos eléctricos, pestañas de conexión (UNO / ESP32) y código.
 
-### 5.5 Tutor IA (`Tutor`)
-- Chat con Markdown mínimo. Recibe automáticamente el contexto: circuito, montaje de protoboard o código Arduino con sus errores. Necesita las capacidades de Claude; en la versión instalable solo da el diagnóstico automático.
+### 5.5 Aprender (`LESSONS`, `Viz`)
+- 5 lecciones con explicación, analogía, fórmula, visualización, quiz y reto; insignias.
 
-### 5.6 Aulas (`Codes`)
-- El docente crea aulas con código. Los estudiantes generan un código **EV1** verificado con su avance, y el docente lo registra.
+### 5.6 Tutor de electrónica (`Tutor`, `VIEWS.tutor`, `EV_TUTOR`)
+- **Módulos**: Básico, Intermedio, Avanzado, Industrial · IoT · Robótica.
+- **Pestañas**: Chat (revisar circuito, código o pregunta libre), Ruta de aprendizaje (temas, fórmulas, preguntas frecuentes), Ejercicios (valores nuevos cada vez, comprobación con margen del 3 %, solución paso a paso) y Leer diagramas (esquemas SVG con preguntas).
+- **IA**: dentro de Claude o con clave de API (panel "Configurar IA", guardada solo en ese navegador). Sin IA responde con su base propia. Instrucciones del agente en `docs/AGENTE_TUTOR.md`.
+- Modo docente: sesión de aprendizaje (MINEDU), rúbrica y quiz (requieren IA).
 
-## 6. Inventario de componentes (v12)
+### 5.7 Aulas (`Codes`)
+- El docente crea aulas con código; los estudiantes generan un código **EV1** verificado con su avance.
 
-**Esquemas — 53 componentes** en 6 categorías (Básicos, Fuentes, Semiconductores, Integrados, Lógica digital, Sensores y cargas):
-resistencia, capacitor, bobina, potenciómetro, interruptor, pulsador, fusible, batería/fuente DC, generador de funciones, tierra, reguladores 7805 / 7812 / AMS1117-3,3, LED, diodos 1N4007 / 1N4148 / 1N5819 / Zener, transistores 2N2222 / BC547 / TIP31C / 2N3906 / BC557, MOSFET 2N7000 / IRFZ44N / IRF9540, LM358, NE555, compuertas AND / OR / NOT / NAND / NOR / XOR / XNOR / buffer (74HC08, 32, 04, 00, 02, 86, 266, 125), flip-flops D / JK / T, latch SR, contador 74HC161, sumador completo, multiplexor 74HC157, decodificador 74HC139, display de 7 segmentos con decodificador, interruptor lógico, reloj, sonda lógica, LDR, NTC 10 kΩ, lámpara, motor DC y zumbador.
+## 6. Inventario de componentes (v13)
 
-**Protoboard — 44 piezas**: Arduino UNO, ESP32 DevKit, batería de 9 V, portapilas 3×AA, fuente de laboratorio, resistencia, potenciómetro, capacitores cerámico y electrolítico, LDR, NTC, LED 5 mm, diodos, Zener 5,1 V, LM35, BJT, MOSFET, 7805, chips 74HC00 / 02 / 04 / 08 / 32 / 86 / 74 / 161 / 138 / 595, CD4511, CD4017, NE555, LM358, display de 7 segmentos, pulsador de 4 patas, interruptor deslizante, DIP switch, zumbador, motor DC y cable puente.
+- **Biblioteca**: 63 componentes de `EV_DATA` (placas UNO R3, Nano, Mega 2560, ESP32 DevKit V1 30 y 38 pines, ESP32-CAM, ESP32-S3; sensores, actuadores, comunicación, visualización, alimentación, básicos y 10 CI).
+- **Esquemas**: 53 componentes en 6 categorías (sin cambios desde la v12).
+- **Protoboard**: 101 piezas en la bandeja, 4 placas programables y 55 módulos.
 
-**Arduino — sensores (19 + módulos)**: potenciómetro, LDR, LM35, MQ-2, MQ-135, humedad de suelo, flama (analógico y digital), sonido KY-038, ACS712, sensor de voltaje, joystick, pulsador, PIR, IR de obstáculos, efecto Hall, inclinación, final de carrera e interruptor magnético. A esto se suman los módulos de la sección 5.3.
+## 7. Arquitectura de `index.html` (líneas aproximadas)
 
-**Placas con pinout**: Arduino UNO y ESP32 DevKit (no hay Nano, Mega, ESP32-CAM ni ESP32-S3).
-
-## 7. Arquitectura del código (mapa del archivo)
-
-| Líneas (aprox.) | Contenido |
+| Líneas | Contenido |
 |---|---|
-| 1-677 | CSS: tema, cáscara de la app, paneles, laboratorio, Arduino, lecciones, tutor, protoboard, estudio a pantalla completa |
-| 681-1099 | Código del Web Worker de Arduino: `BOARDS`, `DEVICES` (librerías), Wi-Fi y API de Arduino |
-| 1100-2616 | Motor: modelos de componentes, red, simulador MNA, lógica digital, tabla de verdad, formato SI, **compilador Arduino**, `TEMPLATES`, `ARD_EXAMPLES`, `LESSONS`, `BADGES` |
-| 2617-3015 | Iconos, avisos, Markdown, `Store`, `State`, `Luz`, `Prefs`, `Perf`, navegación, puerta de entrada, `TOOLS` |
-| 3016-3773 | `Lab` (Esquemas) y `VIEWS.lab` |
-| 3774-4047 | `CATALOG` de Esquemas: símbolos 2D, propiedades e instrumentos |
-| 4048-4692 | `View3D` (3D de Esquemas) |
-| 4693-5140 | Módulos de Arduino (`MODX`, `MOD_DEFS`) y sensores |
-| 5141-6976 | Protoboard: `IC_DEFS`, `PB_CAT`, dibujo realista, `Proto`, `VIEWS.proto`, `Proto3D` |
-| 6977-7995 | `MCU_CODE`, `BOARD_INFO`, sensores, `Ard`, `MOD_VIEWS`, `Iot`, `RealSerial`, dibujo de placas |
-| 7996-8873 | Vistas: Arduino, Inicio, Aprender, `Viz`, `Tutor`, Aulas, Estructura, Ajustes y arranque |
-| 8875-fin | Bloque de Mermaid inyectado por el entorno de Claude (`/_runtime/...`) |
+| 1-854 | Cabecera (importmap, fuentes locales) y CSS |
+| 860-1270 | Código del Web Worker de Arduino |
+| 1275-1290 | Scripts de apoyo (`data/`, `js/`) y `EV_VERSION` |
+| 1290-2900 | Motor: simulador MNA, compilador Arduino, `TEMPLATES`, `LESSONS`, `md()` |
+| 2900-3225 | `Store`, `State`, avisos, `preguntar()`, navegación, puerta de entrada |
+| 3225-4440 | `Lab`, `VIEWS.lab`, `EsqZoom` |
+| 4440-4720 | `CATALOG` de Esquemas |
+| 4720-5410 | `View3D` (3D de Esquemas, carga de r128) |
+| 5410-5930 | `MOD_DEFS`, `generarModulosBib`, `MCU_DEFS` |
+| 5930-8000 | Protoboard: `IC_DEFS`, `PB_CAT`, `Proto`, `VIEWS.proto`, `Proto3D` |
+| 8000-9100 | `MCU_CODE`, `Ard`, `VIEWS.arduino` |
+| 9100-9580 | `VIEWS.inicio`, Aprender, `Tutor` |
+| 9580-9980 | `VIEWS.tutor`, `VIEWS.aulas`, `VIEWS.estructura` |
+| 9980-10360 | `Biblio`, `VIEWS.biblioteca`, `VIEWS.ajustes`, arranque |
+| 10360-fin | `dibujarMermaid` |
 
-## 8. Limitaciones conocidas (registradas en la propia app)
+## 8. Limitaciones conocidas
 
-- Inicio con Google no disponible dentro de Claude (se usa la cuenta de Claude); la versión instalable usa perfiles por computadora.
-- El broker MQTT es simulado. El intérprete de Arduino no emula el chip ciclo a ciclo.
-- Subir programas a placas reales necesitaría un compilador en un servidor.
-- La propia app informa de 477 pruebas automáticas superadas (motor contra teoría, componentes, placas y compilador, protoboard).
+- La IA del tutor necesita internet (y, fuera de Claude, una clave de API).
+- Al abrir con doble clic (`file://`), la Biblioteca usa Three.js r128 (se ve casi igual).
+- Los 27 módulos nuevos de la protoboard todavía no responden al programa.
+- El broker MQTT es simulado y el intérprete de Arduino no emula el chip ciclo a ciclo.
+- Inicio con Google no disponible dentro de Claude.
 
 ## 9. Reglas para continuar el proyecto
 
 - Interfaz y comentarios en español, claros para estudiantes de 13 a 17 años.
 - Trabajar por fases, con resumen y confirmación antes de la siguiente, y un commit de Git al cerrar cada fase.
-- No romper funciones existentes.
+- No romper funciones existentes. Subir el número `?v=` de un script cuando se modifica.
 - Sin logotipos ni marcas registradas en modelos 3D ni imágenes (usar "UNO R3", "ESP32 DevKit").
 - Funcionar sin internet (librerías en `libs/`), en PCs modestas, proyector y celular.
 - Pinouts técnicamente correctos; los datos dudosos se marcan "por verificar".
+- No usar `confirm()`/`alert()`: usar `preguntar()` y `toast()`.

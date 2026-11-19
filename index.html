@@ -1,19 +1,21 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Electroverse Lab</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Electroverse v13 · Laboratorio de electrónica</title>
 <meta name="description" content="Plataforma de electrónica: simulador de circuitos 2D y 3D, Arduino y ESP32 con IoT, lecciones, tutor y aulas.">
-<!-- v13: Three.js moderno (r160) para el visor 3D de la Biblioteca.
-     Es independiente del Three.js r128 que usan Esquemas y Protoboard.
-     En la Fase 4 estas direcciones apuntarán a la carpeta libs/ (sin internet). -->
+<!-- v13: Three.js moderno (r160) para el visor 3D de la Biblioteca, copiado en libs/ (funciona sin internet).
+     Es independiente del Three.js r128 que usan Esquemas y Protoboard (libs/three-r128).
+     Si abres el archivo con doble clic (file://), el navegador bloquea los módulos y la Biblioteca usa r128. -->
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  "three": "./libs/three-r160/three.module.js",
+  "three/addons/": "./libs/three-r160/addons/"
 } }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<!-- Fuentes locales (libs/fonts): no necesitan internet -->
+<link rel="stylesheet" href="libs/fonts/fuentes.css">
 <style>
 /* Concepto: laboratorio holográfico — paneles de vidrio flotando sobre una rejilla de protoboard en penumbra; el color solo aparece donde hay voltaje */
 :root {
@@ -848,7 +850,10 @@ textarea.input.pb-code { height: 260px; min-height: 160px; }
 .v3b-msg { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 10px; text-align: center; padding: 20px; color: var(--muted); }
 @media (max-width: 720px) { .v3b { height: 380px; } .v3b-barra .btn { min-height: 30px; padding: 0 8px; font-size: .74rem; } .v3b-cal { margin-left: 0; } .v3b-ayuda { display: none; } }
 
+[hidden]:not([hidden=until-found i]) { display: none !important; }
 </style>
+</head>
+<body>
 <div id="app" class="app"></div>
 <div id="gate" class="gate"></div>
 <div id="toasts" class="toasts" aria-live="polite"></div>
@@ -1276,10 +1281,12 @@ onmessage = async (ev) => {
 <script src="data/componentes.js?v=13.0.3"></script>
 <script src="data/tutor.js?v=13.1.1"></script>
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
-<script src="js/visor3d.js?v=13.0.3"></script>
+<script src="js/visor3d.js?v=13.0.4"></script>
 <script src="js/modelos3d.js?v=13.0.7"></script>
 <script src="js/realistas3d.js?v=13.0.6"></script>
 <script>
+/* Versión de la plataforma (se muestra en Inicio, Estructura y Ajustes) */
+const EV_VERSION = '13.0.0';
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
 (function (root) {
   'use strict';
@@ -3124,7 +3131,7 @@ function showGate(step) {
     if (!profiles.some(x => x.id === 'invitado') && Store.hasLegacyGuest()) profiles.unshift({ id: 'invitado', alias: 'Invitado', ts: 0 });
     g.innerHTML = `<div class="panel gate-card" role="dialog" aria-modal="true" aria-labelledby="gt">
       <div class="gate-logo">${LOGO}</div>
-      <div><div class="eyebrow">Plataforma de electrónica · versión 2027 (fase 2)</div><h1 id="gt">Aprende, simula y programa <span style="color:var(--cyan)">electrónica real</span></h1></div>
+      <div><div class="eyebrow">Plataforma de electrónica · versión ${EV_VERSION}</div><h1 id="gt">Aprende, simula y programa <span style="color:var(--cyan)">electrónica real</span></h1></div>
       <p class="muted">Circuitos en 2D y 3D, instrumentos virtuales, Arduino y ESP32 con IoT, y un tutor que te explica por qué algo no funciona.</p>
       ${acc ? `<button class="btn primary" id="g-acc">${Store.me.avatarUrl ? `<img src="${esc(Store.me.avatarUrl)}" alt="" style="width:22px;height:22px;border-radius:50%">` : ''} Continuar como ${esc(named || 'tu cuenta')}</button><div class="lbl">O usa un perfil de esta computadora</div>` : '<div class="lbl">¿Quién usa esta computadora?</div>'}
       ${profiles.length ? `<div class="profiles">${profiles.map(pr => `<button class="profile-btn" data-pid="${esc(pr.id)}"><span class="av" style="background:${aliasColor(pr.alias)}">${esc((pr.alias || '?').trim().charAt(0).toUpperCase())}</span><span>${esc(pr.alias)}</span></button>`).join('')}</div>` : ''}
@@ -4701,7 +4708,8 @@ function dmmMulti(p, r, mode) {
 }
 
 /* ===== Protoboard 3D (Three.js r128, carga diferida) ===== */
-const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+const THREE_URL = 'libs/three-r128/three.min.js';   // copia local (sin internet)
+const THREE_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';   // respaldo
 const RES_COLORS = ['#141414', '#7a4a1d', '#d42a2a', '#ff6a00', '#ffd400', '#1fa83a', '#2c66ff', '#8a3ccf', '#8c8c8c', '#f4f4f4'];
 const WIRE_COLORS = ['#f5c518', '#2ecc71', '#3d8bff', '#ff8c1a', '#e8e8e8', '#a05cff'];
 function resistorBands(v) {
@@ -4720,7 +4728,7 @@ const View3D = {
   load() {
     if (window.THREE) return Promise.resolve(window.THREE);
     if (this.loading) return this.loading;
-    const urls = window.EV_THREE_URL ? [window.EV_THREE_URL, THREE_URL] : [THREE_URL];
+    const urls = (window.EV_THREE_URL ? [window.EV_THREE_URL] : []).concat([THREE_URL, THREE_CDN]);   // primero la copia local, luego internet
     this.loading = new Promise((resolve, reject) => {
       const tryNext = i => {
         if (i >= urls.length) { this.loading = null; reject(new Error('No se pudo descargar el motor 3D. Revisa tu conexión a internet.')); return; }
@@ -9919,8 +9927,9 @@ VIEWS.estructura = {
     ];
     const ph = { f1: ['ok', 'Fase 1 · incluida'], f2: ['ok', 'Fase 2 · incluida'], f3: ['vio', 'Fase 3'], f4: ['', 'Fase 4'] };
     return `<div class="view">
-      <div class="view-head"><div><div class="eyebrow">Documento de proyecto · 14.1</div><h1>Estructura de la plataforma</h1><p>Alcance, módulos, arquitectura, base de datos, hoja de ruta y los problemas críticos encontrados al probar esta fase.</p></div></div>
+      <div class="view-head"><div><div class="eyebrow">Documento de proyecto · Electroverse v${EV_VERSION}</div><h1>Estructura de la plataforma</h1><p>Alcance, módulos, arquitectura, base de datos, hoja de ruta y los problemas críticos encontrados al probar esta fase.</p></div></div>
       <div class="grid g3">${[['VOLTIA', 'Corto, se pronuncia igual en español, inglés y quechua. Marca: rayo + onda en degradado cian-magenta.'], ['ILLA Lab', '“Illa” en quechua evoca luz y brillo. Une identidad andina con laboratorio. Ideal para zonas rurales.'], ['NODO Andino', 'El nodo es la base del análisis de circuitos y de una red de colegios conectados. Tono institucional.']].map(([n, d]) => `<section class="panel panel-b"><span class="lbl">Alternativa de nombre</span><h2>${n}</h2><p class="small muted">${d}</p></section>`).join('')}</div>
+      <section class="panel"><div class="panel-h"><h3>Acerca de esta versión</h3><span class="badge ok">v${EV_VERSION}</span></div><div class="panel-b"><p><b>Electroverse v13</b>: biblioteca de ${window.EV_DATA ? EV_DATA.componentes.length : 63} componentes con fichas y modelos 3D en alta resolución, protoboard 3D con modelos realistas, zoom y lectura de conexiones en Esquemas (exportar PNG/SVG e imprimir), botón «Nuevo» y tutor de electrónica por niveles (Básico, Intermedio, Avanzado e Industrial) con ejercicios y lectura de diagramas.</p><p class="small muted">Funciona sin internet: Three.js r128 y r160, Mermaid y las fuentes están en la carpeta <code>libs/</code>. Solo la IA del tutor necesita conexión. Cambios detallados en <code>CHANGELOG.md</code>.</p></div></section>
       <section class="panel"><div class="panel-h"><h3>Mapa de módulos</h3></div><div class="table-wrap"><table class="t"><tr><th>Módulo</th><th>Contenido</th><th>Fase</th></tr>${mods.map(([m, c, f]) => `<tr><td><b>${m}</b></td><td>${c}</td><td><span class="badge ${ph[f][0]}">${ph[f][1]}</span></td></tr>`).join('')}</table></div></section>
       <div class="grid g2">
         <section class="panel"><div class="panel-h"><h3>Arquitectura</h3></div><div class="panel-b"><pre class="mermaid">flowchart TB
@@ -9962,7 +9971,9 @@ VIEWS.estructura = {
         ${QA_ROWS.map(r => `<tr><td>${r[0]}</td><td><span class="badge ${r[1]}">${r[2]}</span> ${r[3]}</td><td>${r[4]}</td></tr>`).join('')}
         </table></div></div></section>
     </div>`;
-  }
+  },
+  // Los diagramas se dibujan al abrir la vista (si Mermaid aún no cargó, al terminar de cargar la página)
+  mount() { const f = () => typeof dibujarMermaid === 'function' && dibujarMermaid($('#app')); if (document.readyState === 'complete') f(); else window.addEventListener('load', f, { once: true }); }
 };
 
 /* ---------- v13 · Biblioteca de componentes ----------
@@ -10233,7 +10244,7 @@ VIEWS.biblioteca = {
 VIEWS.ajustes = {
   render() {
     const p = State.profile, pr = Prefs.get();
-    return `<div class="view"><div class="view-head"><div><div class="eyebrow">Cuenta, accesibilidad y datos</div><h1>Ajustes</h1></div></div>
+    return `<div class="view"><div class="view-head"><div><div class="eyebrow">Cuenta, accesibilidad y datos · Electroverse v${EV_VERSION}</div><h1>Ajustes</h1></div></div>
       <div class="grid g2">
         <section class="panel"><div class="panel-h"><h3>Perfil</h3></div><div class="panel-b">
           <div class="row">${Store.me && Store.me.avatarUrl ? `<img src="${esc(Store.me.avatarUrl)}" alt="" style="width:48px;height:48px;border-radius:50%">` : ''}<div><b>${esc(displayName())}</b><div class="small muted">${roleName(p.rol)}${Store.isOwner ? ' · propietario de la plataforma' : ''}</div></div></div>
@@ -10339,81 +10350,23 @@ function registerSW() {
 
 </script>
 
-<!--claude-mermaid-runtime-begin:3477-->
+<!-- Dibujo de los diagramas Mermaid (sección Estructura y respuestas del tutor) -->
 <style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
-<script>(function(){
-var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
-if(typeof mermaid==='undefined')return;
-var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
-if(!pres.length)return;
-var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
-var root=document.documentElement;
-var items=pres.map(function(pre){
-var mount=document.createElement('div');mount.className='mermaid-diagram';
-return {pre:pre,mount:mount,src:pre.textContent||''};
-});
-var seq=0;
-var renderGen=0;
-var lastKey='';
-function pageBg(fallback){
-var els=[document.body,document.documentElement];
-for(var i=0;i<els.length;i++){
-var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
-if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+<script src="libs/mermaid/mermaid.min.js"></script>
+<script>
+/* Dibuja los bloques <pre class="mermaid"> que haya dentro de "cont" (se llama al abrir cada vista).
+   Usa colores claros u oscuros según el fondo actual de la app. */
+function dibujarMermaid(cont) {
+  if (typeof mermaid === 'undefined' || !cont) return;
+  const fondo = getComputedStyle(document.body).backgroundColor.match(/\d+/g) || [0, 0, 0];
+  const oscuro = (+fondo[0] * 0.3 + +fondo[1] * 0.59 + +fondo[2] * 0.11) < 128;
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: oscuro ? 'dark' : 'default', fontFamily: getComputedStyle(document.body).fontFamily });
+  cont.querySelectorAll('pre.mermaid').forEach(async (pre, i) => {
+    try { const r = await mermaid.render('mm' + Date.now() + i, pre.textContent); const d = document.createElement('div'); d.className = 'mermaid-diagram'; d.innerHTML = r.svg; pre.replaceWith(d); }
+    catch (e) { /* si el diagrama falla, se queda como texto */ }
+  });
 }
-return fallback;
-}
-function render(){
-var theme=root.getAttribute('data-theme');
-var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
-var pal=dark?CFG.palettes.dark:CFG.palettes.light;
-var bg=pageBg(pal.bg);
-var key=(dark?'d':'l')+'|'+bg;
-if(key===lastKey)return;
-lastKey=key;
-var gen=++renderGen;
-var font=getComputedStyle(document.body).fontFamily||'sans-serif';
-var nat={useMaxWidth:false};
-mermaid.initialize({
-startOnLoad:false,securityLevel:'strict',theme:'base',
-flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
-gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
-quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
-packet:nat,kanban:nat,architecture:nat,radar:nat,
-themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
-primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
-nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
-clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
-darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
-attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
-fontSize:'16px',fontFamily:font},
-themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
-});
-items.forEach(function(it){
-var id='claude-mermaid-'+seq++;
-mermaid.render(id,it.src).then(function(r){
-if(gen!==renderGen)return;
-var prev=it.pre.previousElementSibling;
-if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
-it.mount.innerHTML=r.svg;
-if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
-it.pre.style.display='none';
-},function(){
-var scratch=document.getElementById(id);
-if(scratch)scratch.parentNode.removeChild(scratch);
-scratch=document.getElementById('d'+id);
-if(scratch)scratch.parentNode.removeChild(scratch);
-if(gen!==renderGen)return;
-if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
-it.pre.style.display='';
-});
-});
-}
-render();
-if(mq&&mq.addEventListener)mq.addEventListener('change',render);
-if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
-})();</script>
-<!--claude-mermaid-runtime-end-->
+</script>
+<!-- fin de Mermaid -->
 
 </body></html>

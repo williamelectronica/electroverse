@@ -32,7 +32,19 @@
 
   /* ---------- Carga diferida de Three.js (una sola vez) ---------- */
   let promesaThree = null;
+  // Carga un archivo .js clásico (no módulo) y espera a que termine
+  const cargarScript = src => new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + src)); document.head.appendChild(s); });
+  /* Respaldo para cuando la página se abre con doble clic (file://): ahí el navegador bloquea los
+     módulos ES (import), así que usamos la copia clásica de Three.js r128 que está en libs/ */
+  function cargarR128() {
+    const base = 'libs/three-r128/';
+    return (window.THREE ? Promise.resolve() : cargarScript(base + 'three.min.js'))
+      .then(() => Promise.all(['controls/OrbitControls.js', 'environments/RoomEnvironment.js', 'geometries/RoundedBoxGeometry.js']
+        .filter(f => !window.THREE[f.split('/')[1].replace('.js', '')]).map(f => cargarScript(base + 'examples/js/' + f))))
+      .then(() => { const T = window.THREE; return { T, OrbitControls: T.OrbitControls, RoomEnvironment: T.RoomEnvironment, RoundedBoxGeometry: T.RoundedBoxGeometry, r128: true }; });
+  }
   function cargarThree() {
+    if (!promesaThree && (location.protocol === 'file:' || /[?&]r128\b/.test(location.search))) promesaThree = cargarR128().catch(e => { promesaThree = null; throw e; });
     if (!promesaThree) {
       promesaThree = Promise.all([
         import('three'),
@@ -40,6 +52,7 @@
         import('three/addons/environments/RoomEnvironment.js'),
         import('three/addons/geometries/RoundedBoxGeometry.js')
       ]).then(([T, oc, re, rb]) => ({ T, OrbitControls: oc.OrbitControls, RoomEnvironment: re.RoomEnvironment, RoundedBoxGeometry: rb.RoundedBoxGeometry }))
+        .catch(() => cargarR128())   // si los módulos fallan, probamos con r128
         .catch(e => { promesaThree = null; throw e; });
     }
     return promesaThree;
@@ -517,7 +530,8 @@
       V.prBase = Math.min(dpr, Q.pr);
       V.prNitido = Q === CALIDAD.baja ? V.prBase : Math.min(2, Math.max(1, dpr) * (Q === CALIDAD.alta ? 2 : 1.6));
       r.setPixelRatio(V.prBase);
-      r.outputColorSpace = T.SRGBColorSpace;
+      if (T.SRGBColorSpace) r.outputColorSpace = T.SRGBColorSpace;
+      else { r.outputEncoding = T.sRGBEncoding; r.physicallyCorrectLights = true; }   // r128: mismas luces que r160
       r.toneMapping = T.ACESFilmicToneMapping;
       r.toneMappingExposure = 1.05;
       r.setClearColor(0x000000, 0);
