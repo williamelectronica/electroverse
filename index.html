@@ -7505,6 +7505,7 @@ const Proto3D = Object.assign(Object.create(View3D), {
     const led = this.buscarInfo(m, uno ? 'LED "L" (pin 13)' : 'LED azul (GPIO 2)');
     if (led && led.children[1]) led.children[1].material = lm;
     w.userData.mcuLed = { mat: lm, pin: uno ? 13 : 2 }; w.userData.ledMatAlta = lm;
+    this.fusionar(w);
     this.altaCache[clave] = w;
     return w;
   },
@@ -7556,8 +7557,37 @@ const Proto3D = Object.assign(Object.create(View3D), {
       const brazo = this.buscarInfo(m, 'Brazo (horn)');
       if (brazo) { const piv = new T.Group(); piv.position.set(5.5, 0, 0); brazo.position.x -= 5.5; m.add(piv); piv.add(brazo); w.userData.horn = piv; const st = Proto.modSt[p.id], ang = st && st.ok && st.dev && st.dev.state ? st.dev.state.angle : 90; piv.rotation.y = -(ang - 90) * Math.PI / 180; }
     }
+    this.fusionar(w);
     this.altaCache[p.id] = w;
     return w;
+  },
+  /* Optimización: une todas las piezas fijas de un modelo que usan el mismo material en una sola malla.
+     Así la tarjeta gráfica dibuja unas pocas mallas por módulo en vez de decenas (menos "lag").
+     Se dejan aparte las piezas que se mueven o cambian (brazo del servo, pantalla en vivo). */
+  fusionar(w) {
+    const T = THREE, excluir = o => !o.visible || o === w.userData.horn || (w.userData.ownMat && o.material === w.userData.ownMat);
+    w.updateMatrixWorld(true);
+    const inv = new T.Matrix4().copy(w.matrixWorld).invert(), grupos = new Map(), quitar = [];
+    w.traverse(o => {
+      if (!o.isMesh || o.isInstancedMesh || Array.isArray(o.material)) return;
+      for (let a = o; a && a !== w; a = a.parent) if (excluir(a)) return;
+      const geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+      geo.applyMatrix4(new T.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+      if (!geo.attributes.normal) geo.computeVertexNormals();
+      if (!grupos.has(o.material)) grupos.set(o.material, []);
+      grupos.get(o.material).push(geo); quitar.push(o);
+    });
+    quitar.forEach(o => { if (o.parent) o.parent.remove(o); o.geometry.dispose(); });
+    grupos.forEach((geos, m) => {
+      let n = 0; geos.forEach(g => { n += g.attributes.position.count; });
+      const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2); let k = 0;
+      geos.forEach(g => { pos.set(g.attributes.position.array, k * 3); nor.set(g.attributes.normal.array, k * 3); if (g.attributes.uv) uv.set(g.attributes.uv.array, k * 2); k += g.attributes.position.count; g.dispose(); });
+      const bg = new T.BufferGeometry();
+      bg.setAttribute('position', new T.BufferAttribute(pos, 3)); bg.setAttribute('normal', new T.BufferAttribute(nor, 3)); bg.setAttribute('uv', new T.BufferAttribute(uv, 2));
+      bg.computeBoundingSphere(); w.add(new T.Mesh(bg, m));
+    });
+    // los grupos vacíos que quedaron se quitan
+    const vacios = []; w.traverse(o => { if (o !== w && o.isGroup && !o.children.length && o !== w.userData.horn) vacios.push(o); }); vacios.forEach(o => o.parent && o.parent.remove(o));
   },
   liberarAlta(w) {
     w.traverse(o => {
@@ -10074,7 +10104,7 @@ function registerSW() {
 
 <!--claude-mermaid-runtime-begin:3477-->
 <style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
-<script src="/_runtime/mermaid-11.16.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
 <script>(function(){
 var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
 if(typeof mermaid==='undefined')return;
