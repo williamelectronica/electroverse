@@ -293,6 +293,34 @@ table.t td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-a
 .code-big { font: 700 1.6rem var(--f-mono); letter-spacing: .2em; color: var(--cyan); }
 .notice { padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--line-2); color: var(--muted); font-size: .88rem; }
 .notice b { color: var(--fg); }
+.ev-dlg-fondo { position: fixed; inset: 0; z-index: 9999; background: rgba(4, 8, 20, .55); display: grid; place-items: center; padding: 16px; }
+.ev-dlg { max-width: 420px; width: 100%; padding: 18px; display: grid; gap: 10px; background: var(--glass-solid, #121a33); }
+.ev-dlg h3 { margin: 0; }
+/* v13.1 · Tutor de electrónica */
+.tut-tabs { margin: 0 0 12px; flex-wrap: wrap; }
+.tut-ruta details.tut-tema { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 8px 0; background: var(--glass-2); }
+.tut-ruta summary { cursor: pointer; }
+.tut-ruta h4 { margin: 10px 0 4px; font-size: .95em; }
+.tut-faq { margin: 4px 0; padding: 4px 0; border-top: 1px dashed var(--line); }
+.tut-faq summary { cursor: pointer; color: var(--fg); }
+.tut-formulas { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.tut-formulas code { padding: 3px 8px; border-radius: 8px; background: var(--glass-2); border: 1px solid var(--line); }
+.tut-ej, .tut-dg { margin-top: 12px; }
+.tut-enun { font-size: 1.05em; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass-2); margin-bottom: 10px; }
+.tut-sol { margin-top: 10px; padding: 10px 14px; border-left: 3px solid var(--cyan); background: var(--glass-2); border-radius: 8px; }
+.tut-sol h4 { margin: 0 0 6px; }
+.tut-bien { color: #22c55e; font-weight: 600; }
+.tut-mal { color: #f59e0b; font-weight: 600; }
+.tut-svgbox { background: var(--glass-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px; color: var(--fg); overflow-x: auto; }
+.tut-svg { width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto; }
+.tut-svg text { fill: currentColor; stroke: none; font: 12px system-ui, sans-serif; }
+.tut-svg .nodo, .tut-svg .relleno { fill: currentColor; }
+.tut-preg { margin-top: 12px; }
+.tut-ops { display: flex; flex-direction: column; gap: 6px; }
+.tut-ops .btn { justify-content: flex-start; text-align: left; white-space: normal; }
+.tut-ops .btn.ok { border-color: #22c55e; background: color-mix(in srgb, #22c55e 18%, transparent); }
+.tut-ops .btn.bad { border-color: #f59e0b; background: color-mix(in srgb, #f59e0b 18%, transparent); }
+.bubble .mermaid-diagram { background: var(--glass-2); border-radius: 10px; padding: 8px; margin: 6px 0; }
 pre.mermaid { background: var(--glass-2); border-radius: 12px; padding: 12px; overflow-x: auto; border: 1px solid var(--line); }
 
 /* ---------- Login ---------- */
@@ -1246,6 +1274,7 @@ onmessage = async (ev) => {
 <!-- v13: biblioteca de componentes (archivo de datos único) -->
 <!-- El número ?v= obliga al navegador a usar la versión nueva de cada archivo -->
 <script src="data/componentes.js?v=13.0.3"></script>
+<script src="data/tutor.js?v=13.1.1"></script>
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
 <script src="js/visor3d.js?v=13.0.3"></script>
 <script src="js/modelos3d.js?v=13.0.7"></script>
@@ -2812,6 +2841,22 @@ function toast(msg, kind = '', ms = 4200) {
   while (box.children.length > 4) box.firstChild.remove();
   setTimeout(() => el.remove(), ms);
 }
+/* Diálogo de confirmación propio de la app.
+   No usamos confirm() del navegador porque dentro de Claude (artefacto) está bloqueado
+   y devolvería "no" sin mostrar nada. Devuelve una promesa: true = Aceptar, false = Cancelar. */
+function preguntar(titulo, texto, siTexto = 'Aceptar') {
+  return new Promise(resolve => {
+    const fondo = document.createElement('div');
+    fondo.className = 'ev-dlg-fondo';
+    fondo.innerHTML = `<div class="ev-dlg panel" role="alertdialog" aria-modal="true" aria-labelledby="ev-dlg-t"><h3 id="ev-dlg-t">${esc(titulo)}</h3><p class="muted">${esc(texto)}</p><div class="row" style="justify-content:flex-end;gap:8px"><button class="btn" data-r="0">Cancelar</button><button class="btn primary" data-r="1">${esc(siTexto)}</button></div></div>`;
+    const cerrar = r => { fondo.remove(); document.removeEventListener('keydown', tecla, true); resolve(r); };
+    const tecla = e => { if (e.key === 'Escape') { e.stopPropagation(); cerrar(false); } };
+    fondo.onclick = e => { if (e.target === fondo) cerrar(false); const b = e.target.closest('[data-r]'); if (b) cerrar(b.dataset.r === '1'); };
+    document.addEventListener('keydown', tecla, true);
+    document.body.appendChild(fondo);
+    fondo.querySelector('[data-r="1"]').focus();
+  });
+}
 async function copyText(text, el) {
   try { await navigator.clipboard.writeText(text); toast('Copiado al portapapeles.', 'ok'); }
   catch (e) {
@@ -3869,9 +3914,9 @@ VIEWS.lab = {
     $$('.tool[data-tool]').forEach(b => b.onclick = () => L.setTool(b.dataset.tool));
     $('#b-undo').onclick = () => L.undo(); $('#b-redo').onclick = () => L.redo();
     // v13: circuito nuevo (vacía el lienzo; Ctrl+Z lo recupera)
-    $('#b-nuevo').onclick = () => {
+    $('#b-nuevo').onclick = async () => {
       if (!L.parts.length) { toast('El lienzo ya está vacío.', '', 2500); return; }
-      if (!confirm('¿Empezar un circuito nuevo?\nSe quitarán todos los componentes y cables.\nPodrás recuperarlo con Deshacer (Ctrl+Z).')) return;
+      if (!await preguntar('¿Empezar un circuito nuevo?', 'Se quitarán todos los componentes y cables. Podrás recuperarlo con Deshacer (Ctrl+Z).', 'Sí, circuito nuevo')) return;
       if (L.running) L.stop(true);
       L._before = L.snapshot();
       L.parts = []; L.probes = {}; L.selected = null; L.pending = null; L.dmmTarget = null; L.events = []; L.samples = [];
@@ -6800,9 +6845,9 @@ VIEWS.proto = {
     $('#pb-addb').onclick = () => R.addBoard(); $('#pb-delb').onclick = () => R.removeBoard();
     $('#pb-undo').onclick = () => R.undo(); $('#pb-redo').onclick = () => R.redo();
     // v13: montaje nuevo (vacía la mesa; Ctrl+Z lo recupera)
-    $('#pb-nuevo').onclick = () => {
+    $('#pb-nuevo').onclick = async () => {
       if (!R.parts.length) { toast('La protoboard ya está vacía.', '', 2500); return; }
-      if (!confirm('¿Empezar un montaje nuevo?\nSe quitarán todos los componentes, cables y la placa.\nPodrás recuperarlo con Deshacer (Ctrl+Z).')) return;
+      if (!await preguntar('¿Empezar un montaje nuevo?', 'Se quitarán todos los componentes, cables y la placa. Podrás recuperarlo con Deshacer (Ctrl+Z).', 'Sí, montaje nuevo')) return;
       const before = R.snapshot(); R.mcuStop(true);
       R.parts = []; R.probes = {}; R.selected = null;
       R.commit(before); R.changed();
@@ -9404,26 +9449,93 @@ const Tutor = {
     const quick = this.offline(kind);
     if (kind !== 'libre') this.chat.push({ role: 'sys', content: '**Diagnóstico inmediato (funciona sin internet):**\n' + quick });
     this.renderChat();
-    if (!Store.sample) { this.chat.push({ role: 'sys', content: window.EV_STANDALONE ? 'En la versión instalable el tutor con IA no está disponible: necesita el enlace de Claude. El diagnóstico de arriba se calcula en tu computadora, sin internet.' : 'El tutor con IA no está disponible en esta vista (requiere abrir la plataforma dentro de Claude y aceptar el permiso). El diagnóstico de arriba se calcula en tu dispositivo.' }); this.renderChat(); return; }
+    const modo = this.modoIA();
+    // Sin IA disponible: respondemos con la base de conocimiento propia (funciona sin internet)
+    if (modo === 'offline') {
+      if (kind === 'libre') this.chat.push({ role: 'assistant', content: this.respuestaOffline(q) });
+      this.chat.push({ role: 'sys', content: 'Respuesta sin internet (base propia de Electroverse). Para respuestas abiertas con IA, abre la plataforma dentro de Claude o pega una clave de API en **Configurar IA** (panel derecho).' });
+      this.renderChat(); return;
+    }
     this.busy = true; this.ctrl = new AbortController();
     const msg = { role: 'assistant', content: '', streaming: true }; this.chat.push(msg); this.renderChat();
-    const prompt = `Eres el tutor de Electroverse, una plataforma peruana para aprender electrónica. Responde SIEMPRE en español latinoamericano, para ${this.levelText()}.
-Sé concreto: primero la causa del problema, luego cómo corregirlo paso a paso, y termina con una pregunta corta para que el estudiante piense. Usa valores comerciales reales (serie E12) y unidades del SI. Máximo 220 palabras salvo que pidan un documento. Usa markdown sencillo (listas, **negritas**, bloques de código).
+    // Datos de este mensaje: nivel del alumno, módulo elegido y, si corresponde, su circuito o su código
+    const datos = `NIVEL DEL ESTUDIANTE: ${this.levelText()}.
+MÓDULO ACTIVO DEL TUTOR: ${this.moduloNombre()}.
 ${kind !== 'libre' ? '\n' + this.context(kind) + '\n\nDiagnóstico automático ya mostrado al estudiante:\n' + quick + '\n' : ''}
 PREGUNTA DEL ESTUDIANTE: ${q}`;
-    const history = this.chat.filter(m => (m.role === 'user' || m.role === 'assistant') && !m.streaming && m.content).slice(-6, -1).map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
-    const input = history.concat([{ role: 'user', content: prompt }]);
-    while (input.length && input[0].role !== 'user') input.shift();
+    const history = this.chat.filter(m => (m.role === 'user' || m.role === 'assistant') && !m.streaming && m.content).slice(-8, -1).map(m => ({ role: m.role, content: m.content.slice(0, 3000) }));
     try {
-      const r = await Store.sample(input, { signal: this.ctrl.signal, cache: false, modelTier: 'default', onText: ({ text }) => { msg.content = text; this.renderLast(); } });
-      msg.content = r.text;
+      if (modo === 'claude') {
+        // Dentro de Claude (artefacto): las instrucciones del agente van junto con la pregunta
+        const input = history.concat([{ role: 'user', content: EV_TUTOR.agente + '\n\n---\n' + datos }]);
+        while (input.length && input[0].role !== 'user') input.shift();
+        const r = await Store.sample(input, { signal: this.ctrl.signal, cache: false, modelTier: 'default', onText: ({ text }) => { msg.content = text; this.renderLast(); } });
+        msg.content = r.text;
+      } else {
+        msg.content = await this.preguntarAPI(history, datos, msg);
+      }
     } catch (e) {
-      msg.content = (e && e.text) ? e.text : '';
-      const code = e && e.code;
-      const why = code === 'not_granted' ? 'No se dio permiso para usar la IA. Puedes activarlo desde el menú de permisos del artefacto.' : code === 'rate_limited' ? 'Demasiadas preguntas seguidas. Espera un minuto y vuelve a intentarlo.' : code === 'aborted' || (e && e.name === 'AbortError') ? 'Respuesta detenida.' : 'No se pudo obtener respuesta de la IA (' + (code || 'sin conexión') + '). El diagnóstico sin conexión sigue disponible.';
-      this.chat.push({ role: 'sys', content: why });
+      msg.content = (e && e.text) ? e.text : (msg.content || '');
+      this.chat.push({ role: 'sys', content: this.motivoError(e) });
+      if (!msg.content && kind === 'libre') msg.content = this.respuestaOffline(q);   // al menos la respuesta sin internet
     }
     msg.streaming = false; this.busy = false; this.ctrl = null; this.renderChat();
+  },
+  /* ¿Qué IA hay disponible? 'claude' (dentro de Claude), 'api' (clave propia) u 'offline' */
+  modoIA() { if (Store.sample) return 'claude'; if (this.clave() && navigator.onLine !== false) return 'api'; return 'offline'; },
+  clave() { return Store.gget('tutorClave', ''); },
+  modulo: Store.gget('tutorModulo', 'basico'),
+  moduloNombre() { const n = EV_TUTOR.niveles.find(x => x.id === this.modulo); return n ? n.nombre + ' (' + n.desc + ')' : 'Básico'; },
+  /* Pregunta a Claude con el SDK oficial de Anthropic usando la clave que pegó el docente.
+     La clave se guarda solo en este navegador (localStorage) y viaja directo a la API de Anthropic. */
+  async preguntarAPI(history, datos, msg) {
+    if (!this._sdk) this._sdk = import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.4.0/+esm');
+    const m = await this._sdk, Anthropic = m.default || m.Anthropic;
+    this._A = Anthropic;
+    const cliente = new Anthropic({ apiKey: this.clave(), dangerouslyAllowBrowser: true });
+    const messages = history.concat([{ role: 'user', content: datos }]);
+    while (messages.length && messages[0].role !== 'user') messages.shift();
+    const stream = cliente.beta.messages.stream({
+      model: 'claude-opus-5-5',
+      max_tokens: 16000,
+      system: EV_TUTOR.agente,
+      output_config: { effort: 'medium' },
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',            // si el modelo rechaza la consulta, el servidor reintenta con otro modelo
+      messages
+    }, { signal: this.ctrl.signal });
+    let texto = '';
+    for await (const ev of stream) {
+      if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') { texto += ev.delta.text; msg.content = texto; this.renderLast(); }
+    }
+    const fin = await stream.finalMessage();
+    if (fin.stop_reason === 'refusal') return (texto ? texto + '\n\n' : '') + '_La IA no pudo responder esta consulta. Reformúlala enfocándola en el aprendizaje de electrónica._';
+    if (fin.stop_reason === 'max_tokens') texto += '\n\n_(Respuesta cortada por su longitud: pide que continúe.)_';
+    return texto;
+  },
+  motivoError(e) {
+    const A = this._A || {}, code = e && e.code;
+    if (code === 'not_granted') return 'No se dio permiso para usar la IA. Puedes activarlo desde el menú de permisos del artefacto.';
+    if (code === 'aborted' || (e && (e.name === 'AbortError' || (A.APIUserAbortError && e instanceof A.APIUserAbortError)))) return 'Respuesta detenida.';
+    if (A.AuthenticationError && e instanceof A.AuthenticationError) return 'La clave de API no es válida. Revísala en **Configurar IA**.';
+    if (code === 'rate_limited' || (A.RateLimitError && e instanceof A.RateLimitError)) return 'Demasiadas preguntas seguidas. Espera un minuto y vuelve a intentarlo.';
+    if (A.APIConnectionError && e instanceof A.APIConnectionError) return 'Sin conexión con la IA. Te muestro la respuesta sin internet.';
+    if (A.APIError && e instanceof A.APIError) return 'La IA respondió con un error (' + (e.status || '') + '). Inténtalo de nuevo en unos minutos.';
+    return 'No se pudo obtener respuesta de la IA (' + (code || (e && e.message) || 'sin conexión') + '). El tutor sin internet sigue disponible.';
+  },
+  /* Respuesta sin internet: busca en las preguntas frecuentes y temas de data/tutor.js */
+  respuestaOffline(q) {
+    const r = EV_TUTOR.buscar(q, 3);
+    if (!r.length) return 'No encontré ese tema en mi base sin internet. Prueba con otras palabras (por ejemplo: *ley de Ohm*, *relé*, *divisor de tensión*, *contactor*, *PLC*, *MQTT*) o revisa la pestaña **Ruta** para explorar los módulos por nivel.';
+    const a = r[0], out = [];
+    if (a.tipo === 'faq') out.push('**' + a.faq.p + '**', a.faq.r);
+    else out.push('### ' + a.tema.titulo, a.tema.resumen);
+    if (a.tema.formulas.length) out.push('', '**Fórmulas clave:** ' + a.tema.formulas.map(f => '`' + f + '`').join(' · '));
+    out.push('', `_Tema: ${a.tema.titulo} · módulo ${a.nivel.nombre}._`);
+    const otros = r.slice(1).map(x => x.tipo === 'faq' ? '- ' + x.faq.p : '- Tema: ' + x.tema.titulo);
+    if (otros.length) out.push('', '**También puede interesarte:**', ...otros);
+    if (a.tema.ej.length) out.push('', 'Practica en la pestaña **Ejercicios**: ' + a.tema.ej.map(id => EV_TUTOR.gen[id] && EV_TUTOR.gen[id].titulo).filter(Boolean).join(', ') + '.');
+    return out.join('\n');
   },
   teacherPrompt(kind) {
     const tema = $('#t-tema') ? $('#t-tema').value.trim() || 'Ley de Ohm y uso del multímetro' : 'Ley de Ohm';
@@ -9437,53 +9549,178 @@ PREGUNTA DEL ESTUDIANTE: ${q}`;
     el.innerHTML = this.chat.length ? this.chat.map((m, i) => `<div class="bubble ${m.role === 'user' ? 'me' : m.role === 'sys' ? 'sys' : 'ai'}" data-i="${i}">${m.role === 'user' ? esc(m.content) : md(m.content)}${m.streaming && !m.content ? '<span class="muted typing">Pensando</span>' : m.streaming ? '<span class="typing"></span>' : ''}</div>`).join('')
       : `<div class="empty">${ic('bot')}<p>Pregúntame por qué tu LED no enciende, qué hace tu código o pídeme un reto. Primero te doy un diagnóstico automático y luego la explicación de la IA.</p></div>`;
     el.scrollTop = el.scrollHeight;
+    this.dibujarMermaid(el);
     const stop = $('#t-stop'); if (stop) stop.hidden = !this.busy;
     const send = $('#t-send'); if (send) send.disabled = this.busy;
+  },
+  /* Si la IA responde con un diagrama ```mermaid, lo dibujamos (si la librería está cargada) */
+  dibujarMermaid(el) {
+    if (typeof mermaid === 'undefined' || !mermaid.render) return;
+    el.querySelectorAll('.bubble.ai pre code').forEach(async (c, i) => {
+      const src = c.textContent.trim();
+      if (!/^(flowchart|graph|sequenceDiagram|stateDiagram|classDiagram|erDiagram|gantt|mindmap)\b/.test(src)) return;
+      const pre = c.parentElement;
+      try { const r = await mermaid.render('tutmm' + Date.now() + i, src); const d = document.createElement('div'); d.className = 'mermaid-diagram'; d.innerHTML = r.svg; pre.replaceWith(d); }
+      catch (e) { /* si el diagrama tiene errores se deja como texto */ }
+    });
   },
   renderLast: (() => { let raf = 0; return function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { const el = $('#chat'); if (!el) return; const last = el.lastElementChild, m = Tutor.chat[Tutor.chat.length - 1]; if (last && m) { last.innerHTML = md(m.content) + '<span class="typing"></span>'; el.scrollTop = el.scrollHeight; } }); }; })()
 };
 
 VIEWS.tutor = {
+  tab: Store.gget('tutorTab', 'chat'),
+  ej: null,       // ejercicio actual { id, datos }
+  dg: null,       // diagrama actual
   render() {
-    const t = isTeacher();
+    const t = isTeacher(), T = Tutor, D = EV_TUTOR;
+    const modo = T.modoIA(), etiquetaModo = { claude: 'IA de Claude activa', api: 'IA con tu clave activa', offline: 'Modo sin internet' }[modo];
     return `<div class="view">
-      <div class="view-head"><div><div class="eyebrow">Asistente en español · nivel ${State.profile.nivel}</div><h1>Tutor de electrónica</h1><p>Analiza tu circuito y tu programa, explica la causa del error y te sugiere cómo corregirlo.</p></div>
-        <div class="field"><label for="t-nivel">Nivel</label><select class="input" id="t-nivel" style="width:auto"><option value="secundaria">Secundaria</option><option value="instituto">Instituto</option><option value="universidad">Universidad</option></select></div></div>
+      <div class="view-head"><div><div class="eyebrow">Agente de electrónica · de cero a industrial · <span class="badge ${modo === 'offline' ? '' : 'vio'}">${etiquetaModo}</span></div><h1>Tutor de electrónica</h1><p>Resuelve dudas, crea ejercicios con solución paso a paso, enseña a leer diagramas y revisa tu circuito o tu programa.</p></div>
+        <div class="row" style="gap:10px;flex-wrap:wrap">
+          <div class="field"><label for="t-modulo">Módulo</label><select class="input" id="t-modulo" style="width:auto">${D.niveles.map(n => `<option value="${n.id}">${n.nombre}</option>`).join('')}</select></div>
+          <div class="field"><label for="t-nivel">Estudiante</label><select class="input" id="t-nivel" style="width:auto"><option value="secundaria">Secundaria</option><option value="instituto">Instituto</option><option value="universidad">Universidad</option></select></div>
+        </div></div>
+      <div class="seg tut-tabs" role="tablist" aria-label="Secciones del tutor">${[['chat', 'Chat'], ['ruta', 'Ruta de aprendizaje'], ['ejercicios', 'Ejercicios'], ['diagramas', 'Leer diagramas']].map(([k, l]) => `<button role="tab" data-tt="${k}" aria-pressed="${this.tab === k}">${l}</button>`).join('')}</div>
       <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,300px)" id="tutor-grid">
-        <section class="panel" style="min-width:0">
-          <div class="toolbar"><span class="lbl">Revisar:</span><div class="seg" role="group" aria-label="Contexto">${[['circuito', 'Mi circuito'], ['codigo', 'Mi código'], ['libre', 'Pregunta libre']].map(([k, l]) => `<button data-c="${k}" aria-pressed="${Tutor.ctx === k}">${l}</button>`).join('')}</div></div>
-          <div class="chat" id="chat" aria-live="polite"></div>
-          <form class="row panel-b" id="t-form" style="border-top:1px solid var(--line)"><label class="sr" for="t-q">Tu pregunta</label><textarea class="input" id="t-q" rows="2" placeholder="Ej.: ¿Por qué mi LED no enciende?" style="flex:1;min-width:0;resize:vertical"></textarea>
-            <button class="btn primary" id="t-send" type="submit">${ic('send')} Preguntar</button><button class="btn" id="t-stop" type="button" hidden>${ic('stop')} Detener</button></form>
-        </section>
+        <section class="panel" style="min-width:0" id="tut-main">${this.principal()}</section>
         <aside class="side">
           <section class="panel"><div class="panel-h"><h3>Atajos</h3></div><div class="panel-b">
             <button class="btn" data-q="circuito|¿Por qué mi circuito no funciona como espero?">Revisar mi circuito</button>
             <button class="btn" data-q="codigo|Explícame mi programa línea por línea.">Explicar mi código</button>
-            <button class="btn" data-q="libre|Dame un reto práctico sobre lo que estoy aprendiendo, con su solución oculta al final.">Dame un reto</button>
-            <button class="btn" data-q="libre|Hazme 3 preguntas de repaso sobre la ley de Ohm y espera mis respuestas.">Repasar con preguntas</button>
+            <button class="btn" data-q="libre|Dame un ejercicio del módulo activo con datos reales y la solución paso a paso al final.">Ejercicio con IA</button>
+            <button class="btn" data-q="libre|Dame la tabla de conexiones y un diagrama mermaid para conectar un sensor DHT22 y un relé a un ESP32, con el código comentado.">Diagrama de conexión</button>
+            <button class="btn" data-q="libre|Explícame cómo leer el plano de mando de un arranque directo con enclavamiento y su equivalente en Ladder.">Leer un plano industrial</button>
           </div></section>
+          <details class="panel" id="t-ia"${modo === 'offline' ? ' open' : ''}><summary class="panel-h" style="cursor:pointer"><h3>Configurar IA</h3></summary><div class="panel-b">
+            ${modo === 'claude' ? '<p class="small">Estás dentro de Claude: el tutor usa tu cuenta de Claude. No necesitas configurar nada.</p>' : `
+            <p class="small muted">Sin IA, el tutor responde con su base propia (sin internet). Para respuestas abiertas fuera de Claude, el docente puede pegar una <b>clave de API de Anthropic</b>. Se guarda <b>solo en este navegador</b> y cada consulta se cobra a esa cuenta.</p>
+            <div class="field"><label for="t-clave">Clave de API</label><input class="input" id="t-clave" type="password" autocomplete="off" placeholder="sk-ant-…" value="${T.clave() ? '••••••••' : ''}"></div>
+            <div class="row" style="gap:8px"><button class="btn primary" id="t-clave-ok" type="button">Guardar</button>${T.clave() ? '<button class="btn" id="t-clave-del" type="button">Quitar</button>' : ''}</div>
+            <p class="small muted">No uses la clave en computadoras públicas. Modelo: Claude Opus 5.5.</p>`}
+          </div></details>
           ${t ? `<section class="panel"><div class="panel-h"><h3>Modo docente</h3><span class="badge vio">MINEDU</span></div><div class="panel-b">
             <div class="field"><label for="t-tema">Tema</label><input class="input" id="t-tema" value="Ley de Ohm y uso del multímetro"></div>
             <div class="field"><label for="t-grado">Grado</label><select class="input" id="t-grado"><option>1.° de secundaria</option><option selected>2.° de secundaria</option><option>3.° de secundaria</option><option>4.° de secundaria</option><option>5.° de secundaria</option></select></div>
             <button class="btn" data-tq="sesion">Sesión de aprendizaje</button><button class="btn" data-tq="rubrica">Rúbrica</button><button class="btn" data-tq="quiz">Quiz de 5 preguntas</button>
           </div></section>` : ''}
-          <p class="notice small">El tutor ve un resumen de tu circuito y tu código, nunca tus datos personales. Cada pregunta a la IA usa tu propia cuenta de Claude.</p>
+          <p class="notice small">El tutor ve un resumen de tu circuito y tu código, nunca tus datos personales.</p>
         </aside>
       </div></div>`;
+  },
+  /* Contenido de la pestaña activa */
+  principal() {
+    const T = Tutor, D = EV_TUTOR, niv = D.niveles.find(n => n.id === T.modulo) || D.niveles[0];
+    if (this.tab === 'ruta') {
+      return `<div class="panel-h"><h3>Ruta · ${esc(niv.nombre)}</h3><span class="muted small">${niv.temas.length} temas</span></div><div class="panel-b tut-ruta">
+        <p class="muted">${esc(niv.desc)}</p>
+        ${niv.temas.map((t, i) => `<details class="tut-tema"${i === 0 ? ' open' : ''}><summary><b>${i + 1}. ${esc(t.titulo)}</b></summary>
+          <div class="md">${md(t.resumen)}</div>
+          ${t.formulas.length ? `<div class="tut-formulas">${t.formulas.map(f => `<code>${esc(f)}</code>`).join('')}</div>` : ''}
+          ${t.faq.length ? `<h4>Preguntas frecuentes</h4>${t.faq.map(f => `<details class="tut-faq"><summary>${esc(f.p)}</summary><div class="md">${md(f.r)}</div></details>`).join('')}` : ''}
+          <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
+            ${t.ej.map(id => D.gen[id] ? `<button class="btn" data-ir-ej="${id}">✎ ${esc(D.gen[id].titulo)}</button>` : '').join('')}
+            ${t.dg.map(id => { const d = D.diagramas.find(x => x.id === id); return d ? `<button class="btn" data-ir-dg="${id}">◫ ${esc(d.titulo)}</button>` : ''; }).join('')}
+            <button class="btn" data-q="libre|Explícame el tema «${esc(t.titulo)}» con un ejemplo práctico del taller y hazme 2 preguntas al final.">Preguntar al tutor</button>
+          </div></details>`).join('')}
+      </div>`;
+    }
+    if (this.tab === 'ejercicios') {
+      const lista = Object.entries(D.gen).filter(([, g]) => g.nivel === niv.id);
+      if (!this.ej || !D.gen[this.ej.id] || D.gen[this.ej.id].nivel !== niv.id) this.ej = lista.length ? { id: lista[0][0], datos: lista[0][1].crear() } : null;
+      const e = this.ej;
+      return `<div class="panel-h"><h3>Ejercicios · ${esc(niv.nombre)}</h3><span class="muted small">valores nuevos cada vez</span></div><div class="panel-b">
+        <div class="row" style="gap:6px;flex-wrap:wrap">${lista.map(([id, g]) => `<button class="btn${e && e.id === id ? ' primary' : ''}" data-ej="${id}">${esc(g.titulo)}</button>`).join('')}</div>
+        ${e ? `<div class="tut-ej">
+          <div class="md tut-enun">${md(e.datos.enunciado)}</div>
+          <form class="row" id="tut-resp" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div class="field" style="flex:1;min-width:160px"><label for="tut-val">Tu respuesta${e.datos.respuesta.u ? ' (' + esc(e.datos.respuesta.u) + ')' : ''}</label><input class="input" id="tut-val" inputmode="decimal" autocomplete="off" placeholder="Ej.: 12,5"></div>
+            <button class="btn primary" type="submit">Comprobar</button>
+            <button class="btn" type="button" id="tut-sol">Ver solución</button>
+            <button class="btn" type="button" id="tut-otro">Otro ejercicio</button>
+          </form>
+          <div id="tut-fb" aria-live="polite"></div>
+        </div>` : '<p class="muted">Este módulo no tiene ejercicios numéricos: pide uno al tutor con el atajo «Ejercicio con IA».</p>'}
+      </div>`;
+    }
+    if (this.tab === 'diagramas') {
+      const lista = D.diagramas.filter(d => d.nivel === niv.id).concat(D.diagramas.filter(d => d.nivel !== niv.id));
+      if (!this.dg || !D.diagramas.find(d => d.id === this.dg.id)) this.dg = { id: lista[0].id, resp: {} };
+      const d = D.diagramas.find(x => x.id === this.dg.id), nn = id => (D.niveles.find(n => n.id === id) || {}).nombre;
+      return `<div class="panel-h"><h3>Leer diagramas</h3><span class="muted small">${D.diagramas.length} esquemas</span></div><div class="panel-b">
+        <div class="row" style="gap:6px;flex-wrap:wrap">${lista.map(x => `<button class="btn${x.id === d.id ? ' primary' : ''}" data-dg="${x.id}" title="${esc(nn(x.nivel))}">${esc(x.titulo)}</button>`).join('')}</div>
+        <div class="tut-dg">
+          <h4 style="margin:12px 0 4px">${esc(d.titulo)} <span class="badge">${esc(nn(d.nivel))}</span></h4>
+          <p class="muted small">${esc(d.desc)}</p>
+          <div class="tut-svgbox">${d.svg}</div>
+          ${d.preguntas.map((q, i) => { const r = this.dg.resp[i]; return `<div class="tut-preg"><p><b>${i + 1}. ${esc(q.p)}</b></p><div class="tut-ops">${q.ops.map((o, j) => `<button class="btn${r !== undefined ? (j === q.ok ? ' ok' : j === r ? ' bad' : '') : ''}" data-op="${i}|${j}"${r !== undefined ? ' disabled' : ''}>${esc(o)}</button>`).join('')}</div>${r !== undefined ? `<p class="small ${r === q.ok ? 'tut-bien' : 'tut-mal'}">${r === q.ok ? '✔ ¡Correcto! ' : '✘ No exactamente. '}${esc(q.exp)}</p>` : ''}</div>`; }).join('')}
+          <button class="btn" data-q="libre|Explícame el diagrama «${esc(d.titulo)}» bloque por bloque: ${esc(d.desc)}">Explicación completa con el tutor</button>
+        </div>
+      </div>`;
+    }
+    // Chat
+    return `<div class="toolbar"><span class="lbl">Revisar:</span><div class="seg" role="group" aria-label="Contexto">${[['circuito', 'Mi circuito'], ['codigo', 'Mi código'], ['libre', 'Pregunta libre']].map(([k, l]) => `<button data-c="${k}" aria-pressed="${T.ctx === k}">${l}</button>`).join('')}</div></div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <form class="row panel-b" id="t-form" style="border-top:1px solid var(--line)"><label class="sr" for="t-q">Tu pregunta</label><textarea class="input" id="t-q" rows="2" placeholder="Ej.: ¿Para qué sirve el contacto 13-14 de un contactor?" style="flex:1;min-width:0;resize:vertical"></textarea>
+        <button class="btn primary" id="t-send" type="submit">${ic('send')} Preguntar</button><button class="btn" id="t-stop" type="button" hidden>${ic('stop')} Detener</button></form>`;
+  },
+  /* Comprueba la respuesta numérica (acepta coma o punto, margen del 3 %) */
+  comprobar() {
+    const e = this.ej; if (!e) return;
+    const txt = ($('#tut-val').value || '').trim().replace(/\s/g, '').replace(',', '.'), v = parseFloat(txt), ok = e.datos.respuesta.v, fb = $('#tut-fb');
+    if (!isFinite(v)) { fb.innerHTML = '<p class="tut-mal">Escribe un número (puedes usar coma decimal).</p>'; return; }
+    const bien = Math.abs(v - ok) <= Math.max(Math.abs(ok) * 0.03, 0.005);
+    fb.innerHTML = bien ? `<p class="tut-bien">✔ ¡Correcto! El valor exacto es ${EV_TUTOR.cif(ok)} ${esc(e.datos.respuesta.u)}.</p>` + this.solucion()
+      : `<p class="tut-mal">✘ Aún no. Revisa las unidades (¿mA o A? ¿kΩ o Ω?) y vuelve a intentarlo, o mira la solución.</p>`;
+  },
+  solucion() { const e = this.ej; return `<div class="tut-sol"><h4>Solución paso a paso</h4><ol>${e.datos.pasos.map(p => `<li>${md(p).replace(/^<p>|<\/p>$/g, '')}</li>`).join('')}</ol></div>`; },
+  pintar() { const m = $('#tut-main'); if (m) { m.innerHTML = this.principal(); this.enlazar(); } },
+  enlazar() {
+    const T = Tutor;
+    $$('#tut-main [data-c]').forEach(b => b.onclick = () => { T.ctx = b.dataset.c; $$('[data-c]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+    const f = $('#t-form');
+    if (f) {
+      f.onsubmit = e => { e.preventDefault(); const q = $('#t-q').value.trim(); if (!q) { toast('Escribe tu pregunta.', 'warn'); return; } $('#t-q').value = ''; T.ask(q); };
+      $('#t-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } });
+      $('#t-stop').onclick = () => T.ctrl && T.ctrl.abort();
+      T.renderChat();
+    }
+    $$('#tut-main [data-ej]').forEach(b => b.onclick = () => { this.ej = { id: b.dataset.ej, datos: EV_TUTOR.gen[b.dataset.ej].crear() }; this.pintar(); });
+    const r = $('#tut-resp'); if (r) r.onsubmit = e => { e.preventDefault(); this.comprobar(); };
+    const s = $('#tut-sol'); if (s) s.onclick = () => { $('#tut-fb').innerHTML = this.solucion(); };
+    const o = $('#tut-otro'); if (o) o.onclick = () => { this.ej = { id: this.ej.id, datos: EV_TUTOR.gen[this.ej.id].crear() }; this.pintar(); };
+    $$('#tut-main [data-dg]').forEach(b => b.onclick = () => { this.dg = { id: b.dataset.dg, resp: {} }; this.pintar(); });
+    $$('#tut-main [data-op]').forEach(b => b.onclick = () => { const [i, j] = b.dataset.op.split('|').map(Number); this.dg.resp[i] = j; this.pintar(); });
+    $$('#tut-main [data-ir-ej]').forEach(b => b.onclick = () => { this.ej = { id: b.dataset.irEj, datos: EV_TUTOR.gen[b.dataset.irEj].crear() }; this.irTab('ejercicios'); });
+    $$('#tut-main [data-ir-dg]').forEach(b => b.onclick = () => { this.dg = { id: b.dataset.irDg, resp: {} }; this.irTab('diagramas'); });
+    $$('#tut-main [data-q]').forEach(b => b.onclick = () => this.preguntar(b.dataset.q));
+  },
+  irTab(k) { this.tab = k; Store.gset('tutorTab', k); $$('[data-tt]').forEach(x => x.setAttribute('aria-pressed', x.dataset.tt === k)); this.pintar(); },
+  preguntar(dq) {
+    const T = Tutor, [k, q] = dq.split('|');
+    if (this.tab !== 'chat') this.irTab('chat');
+    T.ctx = k; $$('[data-c]').forEach(x => x.setAttribute('aria-pressed', x.dataset.c === k)); T.ask(q, k);
   },
   mount() {
     const T = Tutor;
     if (matchMedia('(max-width: 900px)').matches) $('#tutor-grid').style.gridTemplateColumns = 'minmax(0,1fr)';
     $('#t-nivel').value = State.profile.nivel; $('#t-nivel').onchange = e => { State.profile.nivel = e.target.value; State.save(); };
-    $$('[data-c]').forEach(b => b.onclick = () => { T.ctx = b.dataset.c; $$('[data-c]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
-    $('#t-form').onsubmit = e => { e.preventDefault(); const q = $('#t-q').value.trim(); if (!q) { toast('Escribe tu pregunta.', 'warn'); return; } $('#t-q').value = ''; T.ask(q); };
-    $('#t-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#t-form').requestSubmit(); } });
-    $('#t-stop').onclick = () => T.ctrl && T.ctrl.abort();
-    $$('[data-q]').forEach(b => b.onclick = () => { const [k, q] = b.dataset.q.split('|'); T.ctx = k; $$('[data-c]').forEach(x => x.setAttribute('aria-pressed', x.dataset.c === k)); T.ask(q, k); });
-    $$('[data-tq]').forEach(b => b.onclick = () => T.ask(T.teacherPrompt(b.dataset.tq), 'libre'));
-    T.renderChat();
-    if (T.pending) { const p = T.pending; T.pending = null; T.ctx = p.ctx; $$('[data-c]').forEach(x => x.setAttribute('aria-pressed', x.dataset.c === p.ctx)); T.ask(p.q, p.ctx); }
+    $('#t-modulo').value = T.modulo; $('#t-modulo').onchange = e => { T.modulo = e.target.value; Store.gset('tutorModulo', T.modulo); this.ej = null; this.dg = null; this.pintar(); };
+    $$('[data-tt]').forEach(b => b.onclick = () => this.irTab(b.dataset.tt));
+    $$('aside [data-q]').forEach(b => b.onclick = () => this.preguntar(b.dataset.q));
+    $$('[data-tq]').forEach(b => b.onclick = () => {
+      if (T.modoIA() === 'offline') { toast('Las sesiones, rúbricas y quizzes se generan con IA: configúrala en «Configurar IA».', 'warn', 4500); return; }
+      this.preguntar('libre|' + T.teacherPrompt(b.dataset.tq));
+    });
+    const ok = $('#t-clave-ok');
+    if (ok) ok.onclick = () => {
+      const v = $('#t-clave').value.trim();
+      if (!v || v === '••••••••') { toast('Pega la clave de API.', 'warn'); return; }
+      if (!/^sk-ant-/.test(v)) { toast('La clave de Anthropic empieza con «sk-ant-».', 'warn', 3500); return; }
+      Store.gset('tutorClave', v); toast('Clave guardada en este navegador. El tutor ya usa la IA.', 'ok', 3500); route();
+    };
+    const del = $('#t-clave-del'); if (del) del.onclick = () => { Store.gset('tutorClave', ''); toast('Clave quitada de este navegador.', 'ok'); route(); };
+    this.enlazar();
+    if (T.pending) { const p = T.pending; T.pending = null; this.preguntar(p.ctx + '|' + p.q); }
   }
 };
 
