@@ -17,8 +17,15 @@
    firestore.rules (cada estudiante solo ve su avance, etc.).
    ===================================================================== */
 window.EV_FIREBASE = {
-  // Pega aquí tu firebaseConfig (o deja null para seguir sin cuentas)
-  config: null,
+  // Configuración del proyecto Firebase de Electroverse
+  config: {
+    apiKey: "AIzaSyDxpAagYxhFASSJACLwMZ2hwDFLyr8Lvew",
+    authDomain: "electroverse-6edb9.firebaseapp.com",
+    projectId: "electroverse-6edb9",
+    storageBucket: "electroverse-6edb9.firebasestorage.app",
+    messagingSenderId: "431050992452",
+    appId: "1:431050992452:web:52f8ba18257b891b1d4511"
+  },
   /* Ejemplo de cómo se ve:
   config: {
     apiKey: "AIza...",
