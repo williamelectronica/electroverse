@@ -9492,6 +9492,15 @@ PREGUNTA DEL ESTUDIANTE: ${q}`;
   /* ¿Qué IA hay disponible? 'claude' (dentro de Claude), 'api' (clave propia) u 'offline' */
   modoIA() { if (Store.sample) return 'claude'; if (this.clave() && navigator.onLine !== false) return 'api'; return 'offline'; },
   clave() { return Store.gget('tutorClave', ''); },
+  /* Modelos de Claude que puede elegir el docente (costo aproximado por pregunta del tutor).
+     effort = cuánto "piensa" el modelo: menos esfuerzo = respuesta más rápida y barata.
+     respaldo = si el modelo rechaza una consulta, el servidor reintenta con otro modelo (Haiku no lo tiene). */
+  MODELOS: {
+    'claude-haiku-5-5':  { nombre: 'Claude Haiku 5.5 · económico', costo: '≈ 0,1 centavos de dólar por pregunta', effort: 'low', respaldo: false },
+    'claude-sonnet-5-5': { nombre: 'Claude Sonnet 5.5 · equilibrado', costo: '≈ 1 a 2 centavos de dólar por pregunta', effort: 'low', respaldo: true },
+    'claude-opus-5-5':   { nombre: 'Claude Opus 5.5 · máxima calidad', costo: '≈ 3 a 6 centavos de dólar por pregunta', effort: 'medium', respaldo: true }
+  },
+  modelo() { const m = Store.gget('tutorModelo', 'claude-sonnet-5-5'); return this.MODELOS[m] ? m : 'claude-sonnet-5-5'; },
   modulo: Store.gget('tutorModulo', 'basico'),
   moduloNombre() { const n = EV_TUTOR.niveles.find(x => x.id === this.modulo); return n ? n.nombre + ' (' + n.desc + ')' : 'Básico'; },
   /* Pregunta a Claude con el SDK oficial de Anthropic usando la clave que pegó el docente.
@@ -9503,15 +9512,21 @@ PREGUNTA DEL ESTUDIANTE: ${q}`;
     const cliente = new Anthropic({ apiKey: this.clave(), dangerouslyAllowBrowser: true });
     const messages = history.concat([{ role: 'user', content: datos }]);
     while (messages.length && messages[0].role !== 'user') messages.shift();
-    const stream = cliente.beta.messages.stream({
-      model: 'claude-opus-5-5',
+    const id = this.modelo(), M = this.MODELOS[id];
+    const pedido = {
+      model: id,
       max_tokens: 16000,
       system: EV_TUTOR.agente,
-      output_config: { effort: 'medium' },
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',            // si el modelo rechaza la consulta, el servidor reintenta con otro modelo
+      output_config: { effort: M.effort },
       messages
-    }, { signal: this.ctrl.signal });
+    };
+    let stream;
+    if (M.respaldo) {
+      // si el modelo rechaza la consulta, el servidor reintenta con otro modelo adecuado
+      stream = cliente.beta.messages.stream(Object.assign(pedido, { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }), { signal: this.ctrl.signal });
+    } else {
+      stream = cliente.messages.stream(pedido, { signal: this.ctrl.signal });
+    }
     let texto = '';
     for await (const ev of stream) {
       if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') { texto += ev.delta.text; msg.content = texto; this.renderLast(); }
@@ -9604,7 +9619,9 @@ VIEWS.tutor = {
             <p class="small muted">Sin IA, el tutor responde con su base propia (sin internet). Para respuestas abiertas fuera de Claude, el docente puede pegar una <b>clave de API de Anthropic</b>. Se guarda <b>solo en este navegador</b> y cada consulta se cobra a esa cuenta.</p>
             <div class="field"><label for="t-clave">Clave de API</label><input class="input" id="t-clave" type="password" autocomplete="off" placeholder="sk-ant-…" value="${T.clave() ? '••••••••' : ''}"></div>
             <div class="row" style="gap:8px"><button class="btn primary" id="t-clave-ok" type="button">Guardar</button>${T.clave() ? '<button class="btn" id="t-clave-del" type="button">Quitar</button>' : ''}</div>
-            <p class="small muted">No uses la clave en computadoras públicas. Modelo: Claude Opus 5.5.</p>`}
+            <div class="field"><label for="t-modelo">Modelo de IA</label><select class="input" id="t-modelo">${Object.entries(T.MODELOS).map(([id, m]) => `<option value="${id}"${id === T.modelo() ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('')}</select></div>
+            <p class="small muted" id="t-costo">Costo aproximado: ${esc(T.MODELOS[T.modelo()].costo)}. Pon un límite de gasto mensual en la consola de Anthropic.</p>
+            <p class="small muted">No uses la clave en computadoras públicas ni en las de los estudiantes.</p>`}
           </div></details>
           ${t ? `<section class="panel"><div class="panel-h"><h3>Modo docente</h3><span class="badge vio">MINEDU</span></div><div class="panel-b">
             <div class="field"><label for="t-tema">Tema</label><input class="input" id="t-tema" value="Ley de Ohm y uso del multímetro"></div>
@@ -9726,6 +9743,8 @@ VIEWS.tutor = {
       if (!/^sk-ant-/.test(v)) { toast('La clave de Anthropic empieza con «sk-ant-».', 'warn', 3500); return; }
       Store.gset('tutorClave', v); toast('Clave guardada en este navegador. El tutor ya usa la IA.', 'ok', 3500); route();
     };
+    const sel = $('#t-modelo');
+    if (sel) sel.onchange = () => { Store.gset('tutorModelo', sel.value); $('#t-costo').textContent = 'Costo aproximado: ' + T.MODELOS[sel.value].costo + '. Pon un límite de gasto mensual en la consola de Anthropic.'; toast('Modelo: ' + T.MODELOS[sel.value].nombre, 'ok', 2500); };
     const del = $('#t-clave-del'); if (del) del.onclick = () => { Store.gset('tutorClave', ''); toast('Clave quitada de este navegador.', 'ok'); route(); };
     this.enlazar();
     if (T.pending) { const p = T.pending; T.pending = null; this.preguntar(p.ctx + '|' + p.q); }

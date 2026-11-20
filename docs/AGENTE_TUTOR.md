@@ -8,7 +8,7 @@ Instrucciones del agente que usa el **Tutor IA** de Electroverse. Están en `dat
 |---|---|---|
 | Sin internet | Siempre disponible | Base propia: temas, preguntas frecuentes, ejercicios y diagramas de `data/tutor.js` |
 | IA de Claude | Plataforma abierta dentro de Claude | Respuestas abiertas con la cuenta de Claude del usuario |
-| Clave de API | El docente pega una clave de Anthropic en *Configurar IA* | Respuestas abiertas con Claude Opus 5.5 (SDK oficial `@anthropic-ai/sdk`); la clave se guarda solo en ese navegador |
+| Clave de API | El docente pega una clave de Anthropic en *Configurar IA* | Respuestas abiertas con el modelo elegido: Haiku 5.5 (económico), Sonnet 5.5 (equilibrado, predeterminado) u Opus 5.5 (máxima calidad) (SDK oficial `@anthropic-ai/sdk`); la clave se guarda solo en ese navegador |
 
 ## Instrucciones del agente
 

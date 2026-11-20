@@ -15,7 +15,7 @@ Biblioteca ampliada, 3D en alta resolución, zoom en esquemas y tutor de electr�
 - **Botón Nuevo** en Esquemas y Protoboard (se puede deshacer con Ctrl+Z).
 - **Tutor de electrónica** con 4 módulos (Básico, Intermedio, Avanzado, Industrial · IoT · Robótica): ruta de aprendizaje con 26 temas, 27 tipos de ejercicios con solución paso a paso, 7 diagramas para aprender a leer esquemas y chat (`data/tutor.js`).
 - **Agente ELECTRO**: instrucciones profesionales para la IA, de cero a industrial (`docs/AGENTE_TUTOR.md`).
-- **IA fuera de Claude**: el docente puede pegar una clave de API de Anthropic (se guarda solo en ese navegador). Sin IA, el tutor responde con su base propia.
+- **IA fuera de Claude**: el docente puede pegar una clave de API de Anthropic (se guarda solo en ese navegador) y elegir el modelo: Haiku 5.5 (económico), Sonnet 5.5 (equilibrado, predeterminado) u Opus 5.5 (máxima calidad), con su costo aproximado por pregunta. Sin IA, el tutor responde con su base propia.
 - **Funciona sin internet**: Three.js r128 y r160, Mermaid y las fuentes están en `libs/`.
 - Panel "Acerca de esta versión" en Estructura y número de versión en Inicio y Ajustes.
 

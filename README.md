@@ -32,7 +32,7 @@ Luego abre `http://localhost:8000` en el navegador. Si `python` no se reconoce, 
 Sin configurar nada, el tutor responde con su propia base de conocimiento (sin internet). Para respuestas abiertas con IA:
 
 - Ábrela dentro de Claude, o
-- pega una clave de API de Anthropic en **Tutor → Configurar IA**. La clave se guarda solo en ese navegador; no la uses en computadoras públicas ni de estudiantes.
+- pega una clave de API de Anthropic en **Tutor → Configurar IA** y elige el modelo: **Haiku 5.5** (≈ 0,1 centavos de dólar por pregunta), **Sonnet 5.5** (≈ 1–2 centavos, predeterminado) u **Opus 5.5** (≈ 3–6 centavos). La clave se guarda solo en ese navegador; no la uses en computadoras públicas ni de estudiantes. La clave se obtiene en https://platform.claude.com (créditos de prepago; pon un límite de gasto mensual).
 
 ## Estructura de archivos
 

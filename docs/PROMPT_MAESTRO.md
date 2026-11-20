@@ -41,7 +41,7 @@
 - **Fuentes**: Atkinson Hyperlegible (texto), Chakra Petch (títulos), JetBrains Mono (código), copiadas en `libs/fonts/` (subconjunto latino, licencia SIL OFL).
 - **Diagramas**: Mermaid 11.4.1 en `libs/mermaid/`, dibujado con `dibujarMermaid(cont)` (sección Estructura y respuestas del tutor).
 - **Guardado**: `localStorage` con prefijo `ev1:` por perfil. Dentro de Claude también usa las capacidades del artefacto (`window.claude`) para cuenta, nube, tutor IA y broker MQTT de la clase.
-- **IA del tutor**: dentro de Claude, `Store.sample`; fuera de Claude, SDK oficial `@anthropic-ai/sdk` 1.4.0 (jsDelivr, solo con internet) con la clave de API que pega el docente, modelo `claude-opus-5-5` y respaldo del servidor (`fallbacks: "default"`).
+- **IA del tutor**: dentro de Claude, `Store.sample`; fuera de Claude, SDK oficial `@anthropic-ai/sdk` 1.4.0 (jsDelivr, solo con internet) con la clave de API que pega el docente. El docente elige el modelo en "Configurar IA": `claude-haiku-5-5` (económico), `claude-sonnet-5-5` (equilibrado, predeterminado) o `claude-opus-5-5` (máxima calidad); Sonnet y Opus usan el respaldo del servidor (`fallbacks: "default"`).
 
 ## 3. Estilo visual
 
