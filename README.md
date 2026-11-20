@@ -25,7 +25,7 @@ python -m http.server 8000
 
 Luego abre `http://localhost:8000` en el navegador. Si `python` no se reconoce, usa `py -m http.server 8000`.
 
-**Opción 3 — en internet:** publicada con GitHub Pages (ver el enlace del repositorio).
+**Opción 3 — en internet:** https://williamelectronica.github.io/electroverse/ (GitHub Pages). Código y versiones: https://github.com/williamelectronica/electroverse
 
 ## Tutor con IA
 
