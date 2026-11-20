@@ -298,6 +298,9 @@ table.t td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-a
 .ev-dlg-fondo { position: fixed; inset: 0; z-index: 9999; background: rgba(4, 8, 20, .55); display: grid; place-items: center; padding: 16px; }
 .ev-dlg { max-width: 420px; width: 100%; padding: 18px; display: grid; gap: 10px; background: var(--glass-solid, #121a33); }
 .ev-dlg h3 { margin: 0; }
+/* v14 · Inicio de sesión con cuenta */
+.g-cuenta { display: grid; gap: 8px; }
+.g-correo { display: grid; gap: 8px; }
 /* v13.1 · Tutor de electrónica */
 .tut-tabs { margin: 0 0 12px; flex-wrap: wrap; }
 .tut-ruta details.tut-tema { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 8px 0; background: var(--glass-2); }
@@ -1280,6 +1283,8 @@ onmessage = async (ev) => {
 <!-- El número ?v= obliga al navegador a usar la versión nueva de cada archivo -->
 <script src="data/componentes.js?v=13.0.3"></script>
 <script src="data/tutor.js?v=13.1.1"></script>
+<!-- v14: configuración de Firebase (si está vacía, la app funciona sin cuentas) -->
+<script src="data/firebase-config.js?v=14.0.0"></script>
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
 <script src="js/visor3d.js?v=13.0.4"></script>
 <script src="js/modelos3d.js?v=13.0.7"></script>
@@ -2902,8 +2907,67 @@ function md(src) {
 }
 
 /* ---------- Almacenamiento: dispositivo + nube ---------- */
+/* ---------- v14 · Cuentas con Firebase (opcional) ----------
+   Si data/firebase-config.js tiene una configuración, los usuarios pueden entrar con Google o con
+   correo y contraseña; su avance y las aulas se guardan en Firestore. Si no, todo sigue local.
+   Las librerías están en libs/firebase (se cargan solo si hay configuración). */
+const Fb = {
+  listo: false, auth: null, fs: null, user: null, error: null,
+  configurado() { return !!(window.EV_FIREBASE && EV_FIREBASE.config && EV_FIREBASE.config.apiKey); },
+  adminUid() { return (window.EV_FIREBASE && EV_FIREBASE.adminUid) || ''; },
+  cargarScript(src) { return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + src)); document.head.appendChild(s); }); },
+  /* Carga Firebase y espera a saber si ya había una sesión iniciada (máximo 8 s) */
+  async iniciar() {
+    if (this.listo) return true;
+    try {
+      if (!window.firebase) { await this.cargarScript('libs/firebase/firebase-app-compat.js'); await Promise.all([this.cargarScript('libs/firebase/firebase-auth-compat.js'), this.cargarScript('libs/firebase/firebase-firestore-compat.js')]); }
+      if (!firebase.apps.length) firebase.initializeApp(EV_FIREBASE.config);
+      this.auth = firebase.auth(); this.fs = firebase.firestore();
+      try { await this.fs.enablePersistence({ synchronizeTabs: true }); } catch (e) { /* otra pestaña o navegador sin caché: sigue igual */ }
+      this.user = await new Promise(ok => { const t = setTimeout(() => ok(this.auth.currentUser), 8000); const un = this.auth.onAuthStateChanged(u => { clearTimeout(t); un(); ok(u); }); });
+      this.listo = true; return true;
+    } catch (e) { this.error = e; console.warn('Firebase no disponible:', e); return false; }
+  },
+  /* Pasa la cuenta de Firebase al Store (mismo formato que usaba la cuenta de Claude) */
+  async aplicar(u) {
+    this.user = u || null;
+    if (!u) { Store.me = null; Store.uid = null; Store.db = null; Store.isOwner = false; Store.canEdit = false; Store.cloud = 'local'; return; }
+    Store.me = { id: u.uid, name: u.displayName || (u.email ? u.email.split('@')[0] : 'Usuario'), avatarUrl: u.photoURL || '', email: u.email || '' };
+    Store.db = this.fs; Store.fb = true;
+    Store.isOwner = !!this.adminUid() && u.uid === this.adminUid();
+    Store.canEdit = Store.isOwner;
+    if (!Store.isOwner) { try { const d = await Promise.race([this.fs.doc('docentes/' + u.uid).get(), new Promise((_, j) => setTimeout(() => j(new Error('timeout')), 8000))]); Store.canEdit = d.exists; } catch (e) { Store.canEdit = Store.gget('fbDocente:' + u.uid, false); } }
+    Store.gset('fbDocente:' + u.uid, Store.canEdit);   // recuerda el permiso para entrar sin internet
+  },
+  async entrarGoogle() { const p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); const r = await this.auth.signInWithPopup(p); await this.aplicar(r.user); },
+  async entrarCorreo(correo, clave) { const r = await this.auth.signInWithEmailAndPassword(correo, clave); await this.aplicar(r.user); },
+  async crearCuenta(correo, clave, nombre) {
+    const r = await this.auth.createUserWithEmailAndPassword(correo, clave);
+    if (nombre) await r.user.updateProfile({ displayName: nombre });
+    try { await r.user.sendEmailVerification(); } catch (e) { /* opcional */ }
+    await this.aplicar(r.user);
+    if (nombre && Store.me) Store.me.name = nombre;   // por si el nombre todavía no se actualizó en la cuenta
+  },
+  recuperar(correo) { return this.auth.sendPasswordResetEmail(correo); },
+  async salir() { if (this.auth) await this.auth.signOut(); await this.aplicar(null); },
+  /* Mensajes de error de Firebase en español sencillo */
+  mensaje(e) {
+    const c = (e && e.code) || '';
+    if (c.startsWith('auth/api-key-not-valid')) return 'La configuración de Firebase no es válida: revisa el apiKey en data/firebase-config.js.';
+    return ({
+      'auth/invalid-email': 'El correo no es válido.', 'auth/missing-password': 'Escribe tu contraseña.',
+      'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.', 'auth/email-already-in-use': 'Ya existe una cuenta con ese correo: usa «Entrar».',
+      'auth/invalid-credential': 'Correo o contraseña incorrectos.', 'auth/wrong-password': 'Correo o contraseña incorrectos.', 'auth/user-not-found': 'No hay una cuenta con ese correo.',
+      'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos.', 'auth/popup-closed-by-user': 'Se cerró la ventana de Google antes de terminar.',
+      'auth/popup-blocked': 'El navegador bloqueó la ventana de Google: permite las ventanas emergentes para esta página.',
+      'auth/network-request-failed': 'Sin conexión a internet. Usa un perfil de esta computadora.', 'auth/unauthorized-domain': 'Esta dirección no está autorizada en Firebase (Authentication → Dominios autorizados).',
+      'auth/operation-not-allowed': 'Este método de inicio no está activado en Firebase.'
+    })[c] || ('No se pudo iniciar sesión (' + (c || (e && e.message) || 'error') + ').');
+  }
+};
+
 const Store = {
-  db: null, user: null, uid: null, me: null, isOwner: false, canEdit: false, cloud: 'pendiente', sample: null,
+  db: null, user: null, uid: null, me: null, isOwner: false, canEdit: false, cloud: 'pendiente', sample: null, fb: false,
   localId: null,
   ns() { if (this.localId) return this.localId === 'invitado' ? 'ev1:invitado:' : 'ev1:p-' + this.localId + ':'; return 'ev1:' + (this.uid || 'invitado') + ':'; },
   hasLegacyGuest() { try { return !!localStorage.getItem('ev1:invitado:perfil'); } catch (e) { return false; } },
@@ -2916,7 +2980,12 @@ const Store = {
   async init() {
     const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
     try {
-      if (!window.claude || !window.claude.use) { this.cloud = 'local'; return; }
+      if (!window.claude || !window.claude.use) {
+        this.cloud = 'local';
+        // v14: fuera de Claude, si hay Firebase configurado, recuperamos la sesión guardada
+        if (Fb.configurado() && await Fb.iniciar() && Fb.user) { await Fb.aplicar(Fb.user); this.uid = this.me.id; this.cloud = 'nube'; }
+        return;
+      }
       const [user, db, sample] = await Promise.all([
         withTimeout(claude.use('user'), 11000), withTimeout(claude.use('db'), 11000), withTimeout(claude.use('sample'), 11000)
       ]);
@@ -3133,10 +3202,22 @@ function showGate(step) {
       <div class="gate-logo">${LOGO}</div>
       <div><div class="eyebrow">Plataforma de electrónica · versión ${EV_VERSION}</div><h1 id="gt">Aprende, simula y programa <span style="color:var(--cyan)">electrónica real</span></h1></div>
       <p class="muted">Circuitos en 2D y 3D, instrumentos virtuales, Arduino y ESP32 con IoT, y un tutor que te explica por qué algo no funciona.</p>
-      ${acc ? `<button class="btn primary" id="g-acc">${Store.me.avatarUrl ? `<img src="${esc(Store.me.avatarUrl)}" alt="" style="width:22px;height:22px;border-radius:50%">` : ''} Continuar como ${esc(named || 'tu cuenta')}</button><div class="lbl">O usa un perfil de esta computadora</div>` : '<div class="lbl">¿Quién usa esta computadora?</div>'}
+      ${acc ? `<button class="btn primary" id="g-acc">${Store.me.avatarUrl ? `<img src="${esc(Store.me.avatarUrl)}" alt="" style="width:22px;height:22px;border-radius:50%">` : ''} Continuar como ${esc(named || 'tu cuenta')}</button><div class="lbl">O usa un perfil de esta computadora</div>` : Fb.configurado() ? '' : '<div class="lbl">¿Quién usa esta computadora?</div>'}
+      ${acc && Store.fb ? '<button class="btn sm ghost" id="g-otra" type="button" style="align-self:center">Usar otra cuenta</button>' : ''}
+      ${!acc && Fb.configurado() ? `<div class="g-cuenta">
+        <button class="btn primary" id="g-google" type="button">Entrar con Google</button>
+        <button class="btn" id="g-correo-ver" type="button">Entrar con correo y contraseña</button>
+        <form id="g-correo" class="g-correo" hidden>
+          <input class="input" id="g-mail" type="email" autocomplete="email" placeholder="Correo electrónico">
+          <input class="input" id="g-pass" type="password" autocomplete="current-password" placeholder="Contraseña (mínimo 6 caracteres)">
+          <input class="input" id="g-nom" maxlength="40" placeholder="Tu nombre (solo para crear cuenta)" autocomplete="name">
+          <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn primary" type="submit">Entrar</button><button class="btn" type="button" id="g-crear">Crear cuenta</button><button class="btn sm ghost" type="button" id="g-olvido">Olvidé mi contraseña</button></div>
+        </form>
+        <p class="small muted">Con una cuenta, tu avance se guarda en la nube y lo ves en cualquier computadora o celular.</p>
+        <div class="lbl">O usa un perfil de esta computadora (sin internet)</div></div>` : ''}
       ${profiles.length ? `<div class="profiles">${profiles.map(pr => `<button class="profile-btn" data-pid="${esc(pr.id)}"><span class="av" style="background:${aliasColor(pr.alias)}">${esc((pr.alias || '?').trim().charAt(0).toUpperCase())}</span><span>${esc(pr.alias)}</span></button>`).join('')}</div>` : ''}
       <form class="row" id="g-new"><label class="sr" for="g-alias">Nombre del nuevo perfil</label><input class="input" id="g-alias" maxlength="24" placeholder="${profiles.length ? 'Nuevo perfil: tu nombre o apodo' : 'Tu nombre o apodo'}" autocomplete="off" style="flex:1;min-width:0"><button class="btn ${acc ? '' : 'primary'}" type="submit">${ic('plus')} Crear perfil</button></form>
-      <p class="notice small">${acc ? 'Con tu cuenta de Claude (la misma de Google) el avance se guarda en tu cuenta. ' : ''}Los perfiles de esta computadora sirven para laptops compartidas del colegio: cada estudiante tiene el suyo y el avance se guarda solo aquí, sin internet.</p>
+      <p class="notice small">${acc ? (Store.fb ? 'Con tu cuenta, el avance se guarda en la nube. ' : 'Con tu cuenta de Claude (la misma de Google) el avance se guarda en tu cuenta. ') : ''}Los perfiles de esta computadora sirven para laptops compartidas del colegio: cada estudiante tiene el suyo y el avance se guarda solo aquí, sin internet.</p>
     </div>`;
     const next = () => { resetWorkspace(); State.session = true; Store.gset('session', true); const pr = State.profile; if (!pr.rol || !pr.consent) showGate('rol'); else { g.hidden = true; startApp(); } };
     const openLocal = (id, alias) => {
@@ -3146,13 +3227,35 @@ function showGate(step) {
       if (!State.profile.alias) { const pr = Store.gget('perfiles', []).find(x => x.id === id); State.profile.alias = pr ? pr.alias : 'Invitado'; }
       next();
     };
-    if ($('#g-acc')) $('#g-acc').onclick = async () => {
+    const entrarCuenta = async () => {
       Store.useAccount(); Store.gset('mode', 'cuenta');
       State.profile = Object.assign(State.defaults(), Store.lget('perfil', {}));
       const cloud = await Store.loadCloudProfile();
       if (cloud && (cloud.updated || 0) > (State.profile.updated || 0)) State.profile = Object.assign(State.defaults(), cloud);
+      if (!State.profile.alias && Store.me) State.profile.alias = Store.me.name;
+      activarDocenteAprobado();
       next();
     };
+    if ($('#g-acc')) $('#g-acc').onclick = entrarCuenta;
+    // v14: cuentas de Firebase
+    if ($('#g-otra')) $('#g-otra').onclick = async () => { await Fb.salir(); Store.gset('mode', null); showGate(); };
+    const conCuenta = async (fn, boton) => {
+      if (boton) boton.disabled = true;
+      try { if (!await Fb.iniciar()) throw { code: 'auth/network-request-failed' }; await fn(); await entrarCuenta(); }
+      catch (e) { toast(Fb.mensaje(e), 'bad', 6000); }
+      if (boton) boton.disabled = false;
+    };
+    if ($('#g-google')) $('#g-google').onclick = e => conCuenta(() => Fb.entrarGoogle(), e.currentTarget);
+    if ($('#g-correo-ver')) $('#g-correo-ver').onclick = () => { $('#g-correo').hidden = false; $('#g-correo-ver').hidden = true; $('#g-mail').focus(); };
+    if ($('#g-correo')) {
+      const datos = () => ({ correo: $('#g-mail').value.trim(), clave: $('#g-pass').value, nombre: $('#g-nom').value.trim() });
+      $('#g-correo').onsubmit = e => { e.preventDefault(); const d = datos(); conCuenta(() => Fb.entrarCorreo(d.correo, d.clave), e.submitter); };
+      $('#g-crear').onclick = e => { const d = datos(); if (d.nombre.length < 2) { toast('Escribe tu nombre para crear la cuenta.', 'warn'); $('#g-nom').focus(); return; } conCuenta(() => Fb.crearCuenta(d.correo, d.clave, d.nombre), e.currentTarget); };
+      $('#g-olvido').onclick = async () => {
+        const c = $('#g-mail').value.trim(); if (!c) { toast('Escribe tu correo y vuelve a tocar «Olvidé mi contraseña».', 'warn'); return; }
+        try { await Fb.iniciar(); await Fb.recuperar(c); toast('Te enviamos un correo para cambiar la contraseña.', 'ok', 6000); } catch (e) { toast(Fb.mensaje(e), 'bad', 6000); }
+      };
+    }
     $$('[data-pid]', g).forEach(b => b.onclick = () => openLocal(b.dataset.pid));
     $('#g-new').onsubmit = e => {
       e.preventDefault();
@@ -3173,7 +3276,7 @@ function showGate(step) {
     <div class="eyebrow">Paso 2 de 2</div><h2 id="gt2">¿Cómo usarás Electroverse?</h2>
     <div class="rolepick">
       <button class="rolebtn" data-r="estudiante"><b>Estudiante</b><span class="small muted">Aprendo, simulo y me uno a un aula con un código.</span></button>
-      <button class="rolebtn" data-r="docente" ${teach ? '' : 'disabled'}><b>Docente</b><span class="small muted">${teach ? 'Creo aulas, asigno retos y veo el avance.' : Store.localId ? 'Los perfiles de la computadora son de estudiante. El docente entra con su cuenta.' : 'Requiere permiso de Editor: pídeselo al administrador.'}</span></button>
+      <button class="rolebtn" data-r="docente" ${teach || (Store.fb && !Store.localId) ? '' : 'disabled'}><b>Docente</b><span class="small muted">${teach ? 'Creo aulas, asigno retos y veo el avance.' : Store.localId ? 'Los perfiles de la computadora son de estudiante. El docente entra con su cuenta.' : Store.fb ? 'Envío una solicitud: el administrador la aprueba y entonces podré crear aulas.' : 'Requiere permiso de Editor: pídeselo al administrador.'}</span></button>
     </div>
     <div class="field"><label for="g-nivel">Nivel de explicación</label>
       <select class="input" id="g-nivel"><option value="secundaria">Secundaria</option><option value="instituto">Instituto técnico</option><option value="universidad">Universidad</option></select></div>
@@ -3188,10 +3291,29 @@ function showGate(step) {
   $('#g-ok').onchange = e => { $('#g-go').disabled = !e.target.checked; };
   $('#g-go').onclick = () => {
     p.rol = (rol === 'docente' && Store.isOwner) ? 'admin' : rol;
+    if (rol === 'docente' && !teach && Store.fb && Store.db) solicitarDocente();   // v14: queda pendiente de aprobación
     if (p.rol !== 'estudiante' && !teach) p.rol = 'estudiante';
     p.nivel = $('#g-nivel').value; p.consent = true; State.save();
     g.hidden = true; startApp();
   };
+}
+
+/* v14: si el usuario pidió ser docente y el administrador ya lo aprobó, activa su rol solo */
+function activarDocenteAprobado() {
+  const p = State.profile;
+  if (p && p.pidioDocente && canTeach() && p.rol === 'estudiante') {
+    p.rol = 'docente'; delete p.pidioDocente; State.save();
+    setTimeout(() => toast('¡Tu solicitud fue aprobada! Ahora eres Docente: ya puedes crear aulas.', 'ok', 7000), 800);
+  }
+}
+
+/* v14: pide al administrador el rol de docente (se guarda en solicitudes/{uid}) */
+async function solicitarDocente() {
+  try {
+    await Store.db.doc('solicitudes/' + Store.uid).set({ nombre: Store.me.name || '', correo: Store.me.email || '', t: Date.now() });
+    if (State.profile) { State.profile.pidioDocente = true; State.save(); }
+    toast('Solicitud de docente enviada. Mientras el administrador la aprueba, entras como estudiante.', 'ok', 7000);
+  } catch (e) { toast('No se pudo enviar la solicitud de docente (' + ((e && e.code) || 'sin conexión') + ').', 'bad', 6000); }
 }
 
 function resetWorkspace() {
@@ -9783,15 +9905,37 @@ VIEWS.aulas = {
     Aulas.loadState = 'cargando';
     if (!db) { Aulas.loadState = 'sin-nube'; this.draw(); return; }
     Aulas.timer = setTimeout(() => { if (Aulas.loadState === 'cargando') { Aulas.loadState = 'lento'; this.draw(); } }, 10000);
+    if (Store.fb) { this.subscribeFb(db); return; }
     try {
       Aulas.unsub.push(db.collection('aulas').onSnapshot(s => { Aulas.aulas = s.docs.map(d => Object.assign({ code: d.id }, d.data())); if (!s.metadata.fromCache) { Aulas.loadState = 'ok'; clearTimeout(Aulas.timer); } this.draw(); },
         e => { Aulas.loadState = 'error'; clearTimeout(Aulas.timer); this.draw(); }));
       if (isTeacher()) Aulas.unsub.push(db.collection('entregas').onSnapshot(s => { Aulas.entregas = s.docs.map(d => Object.assign({ _id: d.id }, d.data())); this.draw(); }, () => { }));
     } catch (e) { Aulas.loadState = 'error'; this.draw(); }
   },
+  /* v14 · Firebase: el docente escucha solo sus aulas y las entregas dirigidas a él;
+     el estudiante escucha solo las aulas a las que se unió (así lo exigen las reglas de Firestore) */
+  subscribeFb(db) {
+    const fin = () => { if (Aulas.loadState !== 'ok') { Aulas.loadState = 'ok'; clearTimeout(Aulas.timer); } this.draw(); };
+    const err = () => { Aulas.loadState = 'error'; clearTimeout(Aulas.timer); this.draw(); };
+    try {
+      if (isTeacher()) {
+        const qa = Store.isOwner ? db.collection('aulas') : db.collection('aulas').where('docente', '==', Store.uid);
+        Aulas.unsub.push(qa.onSnapshot(sn => { Aulas.aulas = sn.docs.map(d => Object.assign({ code: d.id }, d.data())); fin(); }, err));
+        const qe = Store.isOwner ? db.collection('entregas') : db.collection('entregas').where('docentes', 'array-contains', Store.uid);
+        Aulas.unsub.push(qe.onSnapshot(sn => { Aulas.entregas = sn.docs.map(d => Object.assign({ _id: d.id }, d.data())); this.draw(); }, () => { }));
+      } else {
+        const codes = (State.profile.aulas || []).map(a => a.code);
+        Aulas.aulas = [];
+        if (!codes.length) { fin(); return; }
+        codes.forEach(code => Aulas.unsub.push(db.doc('aulas/' + code).onSnapshot(d => {
+          Aulas.aulas = Aulas.aulas.filter(a => a.code !== code).concat(d.exists ? [Object.assign({ code }, d.data())] : []); fin();
+        }, () => fin())));
+      }
+    } catch (e) { err(); }
+  },
   draw() { const el = $('#aulas-body'); if (!el) return; el.innerHTML = isTeacher() ? this.teacherHTML() : this.studentHTML(); this.bind(); },
   status() {
-    return { cargando: '<p class="notice">Cargando aulas…</p>', lento: '<p class="notice">Las aulas tardan en cargar. Si no tienes internet, lo que ya tenías se mantiene en este dispositivo.</p>', error: '<p class="notice">No se pudieron leer las aulas compartidas ahora.</p>', 'sin-nube': window.EV_STANDALONE ? '<p class="notice"><b>Versión instalable.</b> Las aulas en la nube están en el enlace de Claude de tu docente. Aquí puedes unirte con el código, hacer los retos y generar tu código de entrega EV1, incluso sin internet.</p>' : '<p class="notice"><b>Sin conexión con la nube.</b> Las aulas compartidas necesitan abrir la plataforma con sesión iniciada. Tu avance sigue guardado en este dispositivo.</p>', ok: '' }[Aulas.loadState] || '';
+    return { cargando: '<p class="notice">Cargando aulas…</p>', lento: '<p class="notice">Las aulas tardan en cargar. Si no tienes internet, lo que ya tenías se mantiene en este dispositivo.</p>', error: '<p class="notice">No se pudieron leer las aulas compartidas ahora.</p>', 'sin-nube': Fb.configurado() ? '<p class="notice"><b>Estás con un perfil de esta computadora.</b> Para las aulas en línea, entra con tu cuenta (Ajustes → Cerrar sesión → Entrar con Google o correo). Sin cuenta puedes unirte con el código, hacer los retos y enviar tu avance con un código EV1.</p>' : window.EV_STANDALONE ? '<p class="notice"><b>Versión instalable.</b> Las aulas en la nube están en el enlace de Claude de tu docente. Aquí puedes unirte con el código, hacer los retos y generar tu código de entrega EV1, incluso sin internet.</p>' : '<p class="notice"><b>Sin conexión con la nube.</b> Las aulas compartidas necesitan abrir la plataforma con sesión iniciada. Tu avance sigue guardado en este dispositivo.</p>', ok: '' }[Aulas.loadState] || '';
   },
   teacherHTML() {
     const mine = Aulas.aulas.filter(a => Store.isOwner || a.docente === Store.uid).sort((a, b) => (b.creado || 0) - (a.creado || 0));
@@ -9882,7 +10026,7 @@ VIEWS.aulas = {
         const o = Codes.decode($('#e-code').value);
         if (o.a !== Aulas.selected) throw new Error('Este código es del aula ' + o.a + ', no de la seleccionada (' + Aulas.selected + ').');
         const id = 'cod-' + o.a + '-' + Codes.hash(o.n + ':' + o.a).toLowerCase();
-        await db.doc('entregas/' + id).set(Object.assign({ aula: o.a }, o));
+        await db.doc('entregas/' + id).set(Object.assign({ aula: o.a, docentes: [Store.uid] }, o));
         $('#e-code').value = ''; toast('Entrega de ' + o.n + ' registrada.', 'ok');
       } catch (err) { toast(err.message || 'Código no válido.', 'bad', 7000); }
     };
@@ -9897,6 +10041,7 @@ VIEWS.aulas = {
       if (db) { try { const s = await db.doc('aulas/' + code).get(); verified = s.exists; if (!s.exists && Aulas.loadState === 'ok') { toast('No existe un aula con el código ' + code + '. Revísalo con tu docente.', 'bad'); return; } } catch (err) { /* sin red: se guarda para verificar luego */ } }
       p.aulas.push({ code, alias, ts: Date.now() }); State.save();
       toast(verified ? 'Te uniste al aula.' : 'Guardado. Se verificará cuando haya conexión.', verified ? 'ok' : 'warn');
+      if (Store.fb) { self.leave(); self.subscribe(); }
       self.draw();
     };
     $$('[data-open]').forEach(b => b.onclick = () => { const [k, v] = b.dataset.open.split(':'); if (k === 'leccion') go('leccion-' + v); else if (k === 'circuito') { Lab.load(v); Lab.persist(); go('lab'); } else { Ard.pendingExample = v; go('arduino'); } });
@@ -9908,7 +10053,8 @@ VIEWS.aulas = {
       if (db && Store.uid) {
         try {
           const all = {}; State.profile.aulas.forEach(a => { all[a.code] = progressSummary(a.code, a.alias); });
-          await db.doc('entregas/' + Store.uid).set({ aulas: all, t: Date.now() });
+          const docentes = [...new Set(State.profile.aulas.map(a => (Aulas.aulas.find(x => x.code === a.code) || {}).docente).filter(Boolean))];   // v14: lo exigen las reglas
+          await db.doc('entregas/' + Store.uid).set({ aulas: all, t: Date.now(), docentes });
           box.innerHTML = '<p class="notice" style="border-color:var(--ok)"><b>Avance enviado.</b> Tu docente ya lo puede ver.</p>'; addXP(5); return;
         } catch (err) { /* sin permiso de escritura: se usa el código */ }
       }
@@ -10269,8 +10415,10 @@ VIEWS.ajustes = {
           <div class="row">${Store.me && Store.me.avatarUrl ? `<img src="${esc(Store.me.avatarUrl)}" alt="" style="width:48px;height:48px;border-radius:50%">` : ''}<div><b>${esc(displayName())}</b><div class="small muted">${roleName(p.rol)}${Store.isOwner ? ' · propietario de la plataforma' : ''}</div></div></div>
           <div class="field"><label for="s-nivel">Nivel de explicación</label><select class="input" id="s-nivel"><option value="secundaria">Secundaria</option><option value="instituto">Instituto técnico</option><option value="universidad">Universidad</option></select></div>
           <div class="field"><label for="s-rol">Rol</label><select class="input" id="s-rol"><option value="estudiante">Estudiante</option>${canTeach() ? `<option value="${Store.isOwner ? 'admin' : 'docente'}">${Store.isOwner ? 'Administrador (docente)' : 'Docente'}</option>` : ''}</select>
-            ${canTeach() ? '' : `<span class="small muted">${Store.localId ? 'Los perfiles de la computadora son de estudiante.' : 'El rol Docente requiere que el administrador te comparta la plataforma como Editor.'}</span>`}</div>
+            ${canTeach() ? '' : `<span class="small muted">${Store.localId ? 'Los perfiles de la computadora son de estudiante.' : Store.fb ? 'Para ser docente, el administrador debe aprobar tu solicitud. <button class="btn sm" id="s-pedir" type="button">Solicitar rol de docente</button>' : 'El rol Docente requiere que el administrador te comparta la plataforma como Editor.'}</span>`}</div>
+          ${Store.fb && !Store.localId && Store.uid ? `<div class="field"><label>Tu identificador (UID)</label><div class="row" style="gap:6px"><code class="mono small" id="s-uid" style="word-break:break-all;flex:1">${esc(Store.uid)}</code><button class="btn sm" id="s-uidc" type="button">${ic('copy')} Copiar</button></div><span class="small muted">El dueño de la plataforma lo pega como adminUid en la configuración de Firebase.</span></div>` : ''}
           <button class="btn" id="s-logout">${ic('logout')} ${Store.localId ? 'Cambiar de perfil' : 'Cerrar sesión'}</button></div></section>
+        ${Store.fb && Store.isOwner && !Store.localId ? `<section class="panel"><div class="panel-h"><h3>Docentes</h3><span class="badge vio">Admin</span></div><div class="panel-b" id="s-docentes"><p class="small muted">Cargando solicitudes…</p></div></section>` : ''}
         <section class="panel"><div class="panel-h"><h3>Accesibilidad</h3></div><div class="panel-b">
           <div class="field"><span class="lbl">Tema</span><div class="seg" role="group" aria-label="Tema">${[['system', 'Sistema'], ['dark', 'Oscuro'], ['light', 'Claro']].map(([k, l]) => `<button data-theme-set="${k}" aria-pressed="${pr.theme === k}">${l}</button>`).join('')}</div></div>
           <div class="field"><span class="lbl">Tamaño del texto</span><div class="seg" role="group" aria-label="Tamaño del texto">${[90, 100, 115, 130].map(f => `<button data-font="${f}" aria-pressed="${pr.font === f}">${f}%</button>`).join('')}</div></div>
@@ -10287,12 +10435,35 @@ VIEWS.ajustes = {
           <p class="muted">Puedes borrar tus datos en cualquier momento desde esta página.</p></div></section>
       </div></div>`;
   },
+  /* v14 · El administrador aprueba o retira docentes (colecciones solicitudes/ y docentes/ en Firestore) */
+  async panelDocentes() {
+    const box = $('#s-docentes'), db = Store.db; if (!box || !db) return;
+    try {
+      const [sol, doc] = await Promise.all([db.collection('solicitudes').get(), db.collection('docentes').get()]);
+      const s = sol.docs.map(d => Object.assign({ uid: d.id }, d.data())), dd = doc.docs.map(d => Object.assign({ uid: d.id }, d.data()));
+      box.innerHTML = `<h4 style="margin:0 0 6px">Solicitudes (${s.length})</h4>
+        ${s.length ? s.map(x => `<div class="row" style="justify-content:space-between;gap:6px;border-bottom:1px solid var(--line);padding:6px 0"><div style="min-width:0"><b>${esc(x.nombre || 'Sin nombre')}</b><div class="small muted" style="word-break:break-all">${esc(x.correo || x.uid)}</div></div><div class="row" style="gap:4px"><button class="btn sm primary" data-aprobar="${esc(x.uid)}">Aprobar</button><button class="btn sm" data-rechazar="${esc(x.uid)}">Rechazar</button></div></div>`).join('') : '<p class="small muted">No hay solicitudes pendientes.</p>'}
+        <h4 style="margin:12px 0 6px">Docentes aprobados (${dd.length})</h4>
+        ${dd.length ? dd.map(x => `<div class="row" style="justify-content:space-between;gap:6px;padding:4px 0"><span style="min-width:0;word-break:break-all">${esc(x.nombre || x.uid)}</span><button class="btn sm danger" data-retirar="${esc(x.uid)}">Retirar</button></div>`).join('') : '<p class="small muted">Todavía no hay docentes aprobados.</p>'}`;
+      const accion = async (fn, ok) => { try { await fn(); toast(ok, 'ok'); this.panelDocentes(); } catch (e) { toast('No se pudo completar (' + ((e && e.code) || 'error') + '). Revisa las reglas de Firestore y tu adminUid.', 'bad', 7000); } };
+      $$('[data-aprobar]', box).forEach(b => b.onclick = () => { const x = s.find(y => y.uid === b.dataset.aprobar); accion(async () => { await db.doc('docentes/' + x.uid).set({ nombre: x.nombre || '', t: Date.now() }); await db.doc('solicitudes/' + x.uid).delete(); }, 'Docente aprobado. Al volver a entrar ya podrá crear aulas.'); });
+      $$('[data-rechazar]', box).forEach(b => b.onclick = () => accion(() => db.doc('solicitudes/' + b.dataset.rechazar).delete(), 'Solicitud rechazada.'));
+      $$('[data-retirar]', box).forEach(b => b.onclick = async () => { if (await preguntar('¿Retirar este docente?', 'Ya no podrá crear aulas ni ver entregas. Sus aulas actuales se conservan.', 'Sí, retirar')) accion(() => db.doc('docentes/' + b.dataset.retirar).delete(), 'Docente retirado.'); });
+    } catch (e) { box.innerHTML = '<p class="small">No se pudieron leer las solicitudes (' + esc((e && e.code) || 'error') + '). Revisa que <code>adminUid</code> sea tu UID en la configuración y en las reglas de Firestore.</p>'; }
+  },
   mount() {
     const p = State.profile;
     $('#s-nivel').value = p.nivel; $('#s-nivel').onchange = e => { p.nivel = e.target.value; State.save(); toast('Nivel actualizado.', 'ok'); };
     $('#s-rol').value = isTeacher() ? (Store.isOwner ? 'admin' : 'docente') : 'estudiante';
     $('#s-rol').onchange = e => { p.rol = e.target.value; State.save(); renderUserChip(); toast('Rol: ' + roleName(p.rol), 'ok'); };
-    $('#s-logout').onclick = () => { history.replaceState(null, '', location.pathname + location.search + '#inicio'); Store.gset('session', false); Store.gset('mode', null); Store.useAccount(); State.session = false; Ard.stop(true); Lab.stop(true); showGate(); };
+    $('#s-logout').onclick = async () => {
+      history.replaceState(null, '', location.pathname + location.search + '#inicio'); Store.gset('session', false); Store.gset('mode', null);
+      if (Store.fb && !Store.localId) { try { await Fb.salir(); } catch (e) { /* sin conexión: igual se cierra aquí */ } }   // v14: en computadoras compartidas la cuenta se cierra de verdad
+      Store.useAccount(); State.session = false; Ard.stop(true); Lab.stop(true); showGate();
+    };
+    if ($('#s-pedir')) $('#s-pedir').onclick = () => solicitarDocente();
+    if ($('#s-uidc')) $('#s-uidc').onclick = () => copyText(Store.uid, $('#s-uid'));
+    if ($('#s-docentes')) this.panelDocentes();
     $$('[data-theme-set]').forEach(b => b.onclick = () => { Prefs.set('theme', b.dataset.themeSet); renderThemeBtn(); route(); });
     $$('[data-font]').forEach(b => b.onclick = () => { Prefs.set('font', +b.dataset.font); route(); });
     $('#s-motion').onchange = e => Prefs.set('motion', e.target.checked ? 'reduce' : 'auto');
@@ -10358,6 +10529,7 @@ function registerSW() {
     if (cloud && (cloud.updated || 0) > (State.profile.updated || 0)) { State.profile = Object.assign(State.defaults(), cloud); Store.lset('perfil', State.profile); }
     else if (State.profile.updated) Store.pushProfile(State.profile);
   }
+  if (Store.fb && !Store.localId) activarDocenteAprobado();
   const resumable = Store.gget('session', false) && State.profile.rol && State.profile.consent && (Store.uid || Store.localId);
   if (resumable) { $('#gate').hidden = true; startApp(); }
   else showGate();

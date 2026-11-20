@@ -1,0 +1,64 @@
+rules_version = '2';
+// =====================================================================
+// ELECTROVERSE · Reglas de seguridad de Firestore (v14)
+// Cópialas en Firebase → Firestore Database → Reglas → Publicar.
+// Cambia TU_UID_DE_ADMIN por tu UID (lo ves en Electroverse → Ajustes).
+//
+// Qué protegen:
+//  - Cada usuario solo lee y escribe SU perfil (avance, circuitos, programa).
+//  - Solo los docentes aprobados crean aulas; cada uno ve solo las suyas.
+//  - Cada estudiante escribe solo su entrega; la leen él y sus docentes.
+//  - Solo el administrador aprueba o retira docentes.
+// =====================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function conCuenta() { return request.auth != null; }
+    function esAdmin() { return conCuenta() && request.auth.uid == 'TU_UID_DE_ADMIN'; }
+    function esDocente() {
+      return esAdmin() || (conCuenta() && exists(/databases/$(database)/documents/docentes/$(request.auth.uid)));
+    }
+
+    // Perfil y avance de cada usuario
+    match /data/users/{uid}/perfil {
+      allow read, write: if conCuenta() && request.auth.uid == uid;
+    }
+
+    // Aulas: el código (6 letras o números) es el id del documento
+    match /aulas/{codigo} {
+      allow get: if conCuenta();                                   // para unirse con el código
+      allow list: if esAdmin() || (esDocente() && resource.data.docente == request.auth.uid);
+      allow create: if esDocente()
+        && codigo.matches('^[A-Z0-9]{6}$')
+        && request.resource.data.docente == request.auth.uid;
+      allow update: if esAdmin() || (esDocente()
+        && resource.data.docente == request.auth.uid
+        && request.resource.data.docente == request.auth.uid);
+      allow delete: if esAdmin() || (esDocente() && resource.data.docente == request.auth.uid);
+    }
+
+    // Entregas de avance: id = UID del estudiante, o "cod-…" si el docente registró un código EV1
+    match /entregas/{id} {
+      allow read: if esAdmin() || (conCuenta()
+        && (id == request.auth.uid || request.auth.uid in resource.data.docentes));
+      allow create, update: if conCuenta() && request.resource.data.docentes is list
+        && request.resource.data.docentes.size() <= 20
+        && (id == request.auth.uid
+            || (esDocente() && id.matches('^cod-.*') && request.auth.uid in request.resource.data.docentes));
+      allow delete: if esAdmin() || (conCuenta() && id == request.auth.uid);
+    }
+
+    // Docentes aprobados (los aprueba el administrador desde Ajustes)
+    match /docentes/{uid} {
+      allow get: if conCuenta() && (request.auth.uid == uid || esAdmin());
+      allow list, write: if esAdmin();
+    }
+
+    // Solicitudes para ser docente
+    match /solicitudes/{uid} {
+      allow create, update: if conCuenta() && request.auth.uid == uid;
+      allow get: if conCuenta() && (request.auth.uid == uid || esAdmin());
+      allow list, delete: if esAdmin();
+    }
+  }
+}

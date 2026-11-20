@@ -46,6 +46,9 @@ Sin configurar nada, el tutor responde con su propia base de conocimiento (sin i
 | `js/realistas3d.js` | Modelos 3D realistas de la protoboard |
 | `libs/` | Three.js r128 y r160, Mermaid y fuentes (para funcionar sin internet) |
 | `docs/PROMPT_MAESTRO.md` | Descripción completa de la app para continuarla |
+| `data/firebase-config.js` | Configuración de Firebase (vacía = sin cuentas) |
+| `firestore.rules` | Reglas de seguridad de la base de datos |
+| `docs/FIREBASE.md` | Guía para activar cuentas y aulas en línea |
 | `docs/AGENTE_TUTOR.md` | Instrucciones del agente tutor de electrónica |
 | `docs/CHECKLIST_PRUEBAS.md` | Lista de pruebas antes de publicar |
 | `docs/AUDITORIA_V12.md` | Auditoría de la versión 12 |

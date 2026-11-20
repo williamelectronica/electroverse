@@ -2,6 +2,15 @@
 
 Todos los cambios importantes de Electroverse. Las versiones siguen el formato `mayor.menor.parche`.
 
+## [Sin publicar] — v14 en desarrollo
+
+### Nuevo
+- **Cuentas con Firebase** (opcional): entrar con Google o con correo y contraseña, avance guardado en la nube (`data/firebase-config.js`, `libs/firebase/`). Sin configuración, la app sigue igual que antes.
+- **Aulas en línea**: cada docente ve solo sus aulas y las entregas dirigidas a él; el estudiante envía su avance con un botón.
+- **Docentes aprobados**: el usuario pide el rol de docente y el administrador lo aprueba en Ajustes → Docentes; al volver a entrar recibe el rol automáticamente.
+- **Reglas de seguridad** de Firestore (`firestore.rules`) y guía paso a paso (`docs/FIREBASE.md`).
+- Ajustes muestra el UID de la cuenta y cierra la sesión de verdad en computadoras compartidas.
+
 ## [13.0.0] — 2026-11-19
 
 Biblioteca ampliada, 3D en alta resolución, zoom en esquemas y tutor de electrónica por niveles.
