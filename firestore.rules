@@ -2,7 +2,7 @@ rules_version = '2';
 // =====================================================================
 // ELECTROVERSE · Reglas de seguridad de Firestore (v14)
 // Cópialas en Firebase → Firestore Database → Reglas → Publicar.
-// Cambia TU_UID_DE_ADMIN por tu UID (lo ves en Electroverse → Ajustes).
+// Administrador: UID WE9k3K0VGLRWpZBtoGX4yixR0JL2 (Electroverse → Ajustes).
 //
 // Qué protegen:
 //  - Cada usuario solo lee y escribe SU perfil (avance, circuitos, programa).
@@ -14,7 +14,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function conCuenta() { return request.auth != null; }
-    function esAdmin() { return conCuenta() && request.auth.uid == 'TU_UID_DE_ADMIN'; }
+    function esAdmin() { return conCuenta() && request.auth.uid == 'WE9k3K0VGLRWpZBtoGX4yixR0JL2'; }
     function esDocente() {
       return esAdmin() || (conCuenta() && exists(/databases/$(database)/documents/docentes/$(request.auth.uid)));
     }

@@ -37,5 +37,5 @@ window.EV_FIREBASE = {
   },
   */
   // UID del administrador (el docente dueño de la plataforma): aprueba a los demás docentes
-  adminUid: ''
+  adminUid: 'WE9k3K0VGLRWpZBtoGX4yixR0JL2'
 };

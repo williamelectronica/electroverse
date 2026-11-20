@@ -55,7 +55,7 @@ config: {
 
 1. En Firestore, pestaña **Reglas**.
 2. Borra lo que hay y pega todo el contenido del archivo `firestore.rules` de Electroverse.
-3. **Todavía no cambies** `TU_UID_DE_ADMIN` (lo harás en el paso 7). Pulsa **Publicar**.
+3. Pulsa **Publicar**. (En una instalación nueva, `TU_UID_DE_ADMIN` se reemplaza en el paso 7. En Electroverse ya está puesto el UID del administrador: si vuelves a copiar el archivo, ya va incluido.)
 
 ## Paso 6 — Probar el inicio de sesión
 
