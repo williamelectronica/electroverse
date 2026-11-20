@@ -10,6 +10,8 @@ Todos los cambios importantes de Electroverse. Las versiones siguen el formato `
 - **Docentes aprobados**: el usuario pide el rol de docente y el administrador lo aprueba en Ajustes → Docentes; al volver a entrar recibe el rol automáticamente.
 - **Reglas de seguridad** de Firestore (`firestore.rules`) y guía paso a paso (`docs/FIREBASE.md`).
 - Ajustes muestra el UID de la cuenta y cierra la sesión de verdad en computadoras compartidas.
+- **Servidor de IA para estudiantes** (`servidor-ia/`, Cloudflare Workers): guarda la clave de Anthropic como secreto, solo responde a usuarios con sesión de Firebase y a la página de Electroverse, limita las preguntas por estudiante y por día (20 y 500 por defecto), usa Claude Haiku 5.5 y responde en vivo. Incluye 27 pruebas automáticas y guía (`docs/SERVIDOR_IA.md`).
+- El tutor usa el servidor de la plataforma cuando el estudiante entra con su cuenta, muestra cuántas preguntas le quedan y, al llegar al límite, responde sin IA.
 
 ## [13.0.0] — 2026-11-19
 

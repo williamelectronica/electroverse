@@ -1284,7 +1284,7 @@ onmessage = async (ev) => {
 <script src="data/componentes.js?v=13.0.3"></script>
 <script src="data/tutor.js?v=13.1.1"></script>
 <!-- v14: configuración de Firebase (si está vacía, la app funciona sin cuentas) -->
-<script src="data/firebase-config.js?v=14.0.2"></script>
+<script src="data/firebase-config.js?v=14.0.3"></script>
 <!-- v13: visor 3D de la Biblioteca (Three.js r160 se carga solo al abrir una ficha) -->
 <script src="js/visor3d.js?v=13.0.4"></script>
 <script src="js/modelos3d.js?v=13.0.7"></script>
@@ -9583,7 +9583,9 @@ const Tutor = {
     // Sin IA disponible: respondemos con la base de conocimiento propia (funciona sin internet)
     if (modo === 'offline') {
       if (kind === 'libre') this.chat.push({ role: 'assistant', content: this.respuestaOffline(q) });
-      this.chat.push({ role: 'sys', content: 'Respuesta sin internet (base propia de Electroverse). Para respuestas abiertas con IA, abre la plataforma dentro de Claude o pega una clave de API en **Configurar IA** (panel derecho).' });
+      this.chat.push({ role: 'sys', content: this.iaUrl() && Fb.configurado()
+        ? (navigator.onLine === false ? 'Respuesta sin internet (base propia de Electroverse). Con conexión, el tutor usa la IA de la plataforma.' : 'Respuesta sin internet (base propia de Electroverse). Para usar la IA, **entra con tu cuenta** (Ajustes → Cerrar sesión → Entrar con Google o correo).')
+        : 'Respuesta sin internet (base propia de Electroverse). Para respuestas abiertas con IA, abre la plataforma dentro de Claude o pega una clave de API en **Configurar IA** (panel derecho).' });
       this.renderChat(); return;
     }
     this.busy = true; this.ctrl = new AbortController();
@@ -9601,6 +9603,8 @@ PREGUNTA DEL ESTUDIANTE: ${q}`;
         while (input.length && input[0].role !== 'user') input.shift();
         const r = await Store.sample(input, { signal: this.ctrl.signal, cache: false, modelTier: 'default', onText: ({ text }) => { msg.content = text; this.renderLast(); } });
         msg.content = r.text;
+      } else if (modo === 'servidor') {
+        msg.content = await this.preguntarServidor(history, datos, msg);
       } else {
         msg.content = await this.preguntarAPI(history, datos, msg);
       }
@@ -9612,7 +9616,40 @@ PREGUNTA DEL ESTUDIANTE: ${q}`;
     msg.streaming = false; this.busy = false; this.ctrl = null; this.renderChat();
   },
   /* ¿Qué IA hay disponible? 'claude' (dentro de Claude), 'api' (clave propia) u 'offline' */
-  modoIA() { if (Store.sample) return 'claude'; if (this.clave() && navigator.onLine !== false) return 'api'; return 'offline'; },
+  modoIA() {
+    if (Store.sample) return 'claude';
+    const enLinea = navigator.onLine !== false;
+    if (this.clave() && enLinea) return 'api';
+    if (this.iaUrl() && Store.fb && !Store.localId && Fb.user && enLinea) return 'servidor';   // v14: IA de la plataforma
+    return 'offline';
+  },
+  iaUrl() { return String((window.EV_FIREBASE && EV_FIREBASE.iaUrl) || '').replace(/\/+$/, ''); },
+  restantes: null, limite: null,
+  /* v14 · Pregunta al servidor de IA de la plataforma (Cloudflare Workers).
+     El servidor guarda la clave de Anthropic, comprueba la sesión de Firebase y aplica el límite diario. */
+  async preguntarServidor(history, datos, msg) {
+    const token = await Fb.auth.currentUser.getIdToken();
+    const messages = history.concat([{ role: 'user', content: datos }]);
+    while (messages.length && messages[0].role !== 'user') messages.shift();
+    for (let i = messages.length - 1; i > 0; i--) if (messages[i].role === messages[i - 1].role) messages.splice(i - 1, 1);   // turnos alternados
+    messages.forEach(m => { if (m.content.length > 7900) m.content = m.content.slice(0, 7900) + '\n[…recortado]'; });   // el servidor acepta hasta 8000 caracteres por mensaje
+    const r = await fetch(this.iaUrl() + '/preguntar', {
+      method: 'POST', signal: this.ctrl.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ system: EV_TUTOR.agente, messages })
+    });
+    if (r.headers.get('X-Limite')) { this.limite = +r.headers.get('X-Limite'); this.restantes = +r.headers.get('X-Restantes'); }
+    if (!r.ok) {
+      let j = {}; try { j = await r.json(); } catch (e) { /* respuesta sin JSON */ }
+      throw { servidor: true, status: r.status, text: '', mensaje: j.mensaje || ('El servidor de IA respondió con un error (' + r.status + ').') };
+    }
+    const lector = r.body.getReader(), dec = new TextDecoder(); let texto = '';
+    for (;;) { const { done, value } = await lector.read(); if (done) break; texto += dec.decode(value, { stream: true }); msg.content = texto; this.renderLast(); }
+    texto += dec.decode();
+    // aviso de cuántas preguntas quedan (va justo después de la respuesta)
+    if (this.restantes !== null) this.chat.push({ role: 'sys', content: this.restantes > 0 ? `Te quedan **${this.restantes}** preguntas con IA hoy.` : 'Usaste todas tus preguntas con IA de hoy. Mañana tendrás más; mientras tanto el tutor responde sin IA.' });
+    return texto;
+  },
   clave() { return Store.gget('tutorClave', ''); },
   /* Modelos de Claude que puede elegir el docente (costo aproximado por pregunta del tutor).
      effort = cuánto "piensa" el modelo: menos esfuerzo = respuesta más rápida y barata.
@@ -9659,6 +9696,9 @@ PREGUNTA DEL ESTUDIANTE: ${q}`;
     return texto;
   },
   motivoError(e) {
+    if (e && e.servidor) return e.status === 401 ? 'Tu sesión venció: cierra sesión y vuelve a entrar con tu cuenta.' : e.mensaje;
+    if (e && e.name === 'AbortError') return 'Respuesta detenida.';
+    if (e && e.name === 'TypeError' && this.modoIA() === 'servidor') return 'No se pudo conectar con el servidor de IA. Revisa tu internet; mientras tanto te respondo sin IA.';
     const A = this._A || {}, code = e && e.code;
     if (code === 'not_granted') return 'No se dio permiso para usar la IA. Puedes activarlo desde el menú de permisos del artefacto.';
     if (code === 'aborted' || (e && (e.name === 'AbortError' || (A.APIUserAbortError && e instanceof A.APIUserAbortError)))) return 'Respuesta detenida.';
@@ -9718,7 +9758,7 @@ VIEWS.tutor = {
   dg: null,       // diagrama actual
   render() {
     const t = isTeacher(), T = Tutor, D = EV_TUTOR;
-    const modo = T.modoIA(), etiquetaModo = { claude: 'IA de Claude activa', api: 'IA con tu clave activa', offline: 'Modo sin internet' }[modo];
+    const modo = T.modoIA(), etiquetaModo = { claude: 'IA de Claude activa', api: 'IA con tu clave activa', servidor: 'IA de la plataforma activa', offline: 'Modo sin internet' }[modo];
     return `<div class="view">
       <div class="view-head"><div><div class="eyebrow">Agente de electrónica · de cero a industrial · <span class="badge ${modo === 'offline' ? '' : 'vio'}">${etiquetaModo}</span></div><h1>Tutor de electrónica</h1><p>Resuelve dudas, crea ejercicios con solución paso a paso, enseña a leer diagramas y revisa tu circuito o tu programa.</p></div>
         <div class="row" style="gap:10px;flex-wrap:wrap">
@@ -9737,7 +9777,10 @@ VIEWS.tutor = {
             <button class="btn" data-q="libre|Explícame cómo leer el plano de mando de un arranque directo con enclavamiento y su equivalente en Ladder.">Leer un plano industrial</button>
           </div></section>
           <details class="panel" id="t-ia"${modo === 'offline' ? ' open' : ''}><summary class="panel-h" style="cursor:pointer"><h3>Configurar IA</h3></summary><div class="panel-b">
-            ${modo === 'claude' ? '<p class="small">Estás dentro de Claude: el tutor usa tu cuenta de Claude. No necesitas configurar nada.</p>' : `
+            ${modo === 'claude' ? '<p class="small">Estás dentro de Claude: el tutor usa tu cuenta de Claude. No necesitas configurar nada.</p>' : T.iaUrl() && !t ? (modo === 'servidor'
+              ? `<p class="small"><b>IA de la plataforma activa.</b> Tu docente la configuró: no necesitas ninguna clave.${T.restantes !== null ? ` Te quedan <b>${T.restantes}</b> de ${T.limite} preguntas hoy.` : ''}</p>`
+              : '<p class="small">La plataforma tiene IA para estudiantes: <b>entra con tu cuenta</b> (Google o correo) para usarla. Sin cuenta, el tutor responde con su base propia.</p>') : `
+            ${T.iaUrl() ? `<p class="small"><b>Servidor de IA de la plataforma:</b> ${modo === 'servidor' ? 'activo para ti y tus estudiantes.' : 'configurado (los estudiantes lo usan con su cuenta).'} Si pegas una clave propia aquí, este navegador usará tu clave en lugar del servidor.</p>` : ''}
             <p class="small muted">Sin IA, el tutor responde con su base propia (sin internet). Para respuestas abiertas fuera de Claude, el docente puede pegar una <b>clave de API de Anthropic</b>. Se guarda <b>solo en este navegador</b> y cada consulta se cobra a esa cuenta.</p>
             <div class="field"><label for="t-clave">Clave de API</label><input class="input" id="t-clave" type="password" autocomplete="off" placeholder="sk-ant-…" value="${T.clave() ? '••••••••' : ''}"></div>
             <div class="row" style="gap:8px"><button class="btn primary" id="t-clave-ok" type="button">Guardar</button>${T.clave() ? '<button class="btn" id="t-clave-del" type="button">Quitar</button>' : ''}</div>

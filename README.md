@@ -48,6 +48,8 @@ Sin configurar nada, el tutor responde con su propia base de conocimiento (sin i
 | `docs/PROMPT_MAESTRO.md` | Descripción completa de la app para continuarla |
 | `data/firebase-config.js` | Configuración de Firebase (vacía = sin cuentas) |
 | `firestore.rules` | Reglas de seguridad de la base de datos |
+| `servidor-ia/` | Servidor de IA del tutor para estudiantes (Cloudflare Workers) |
+| `docs/SERVIDOR_IA.md` | Guía para instalar el servidor de IA |
 | `docs/FIREBASE.md` | Guía para activar cuentas y aulas en línea |
 | `docs/AGENTE_TUTOR.md` | Instrucciones del agente tutor de electrónica |
 | `docs/CHECKLIST_PRUEBAS.md` | Lista de pruebas antes de publicar |

@@ -1,0 +1,18 @@
+{
+  "name": "electroverse-servidor-ia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intermediario seguro para la IA del tutor de Electroverse (Cloudflare Workers)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "prueba": "node prueba/prueba.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.4.0"
+  },
+  "devDependencies": {
+    "wrangler": "4.156.0"
+  }
+}

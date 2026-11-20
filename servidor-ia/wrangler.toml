@@ -1,0 +1,31 @@
+# =====================================================================
+# ELECTROVERSE · Configuración del servidor de IA (Cloudflare Workers)
+# Guía paso a paso: docs/SERVIDOR_IA.md
+# =====================================================================
+name = "electroverse-ia"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Contadores de preguntas por día (Workers KV).
+# Créalo con:  npx wrangler kv namespace create LIMITES
+# y pega aquí el "id" que te muestra.
+[[kv_namespaces]]
+binding = "LIMITES"
+id = "PEGA_AQUI_EL_ID_DE_KV"
+
+[vars]
+# Proyecto de Firebase cuyos usuarios pueden preguntar
+FIREBASE_PROJECT_ID = "electroverse-6edb9"
+# Páginas que pueden usar este servidor (separadas por comas)
+ORIGENES = "https://williamelectronica.github.io,http://localhost:8013,http://localhost:8000"
+# Preguntas con IA por estudiante al día, y tope diario para toda la plataforma
+LIMITE_DIARIO_USUARIO = "20"
+LIMITE_DIARIO_TOTAL = "500"
+# Modelo que se usa (el más económico) y modelos que la página puede pedir
+MODELO = "claude-haiku-5-5"
+MODELOS_PERMITIDOS = "claude-haiku-5-5,claude-sonnet-5-5"
+# Largo máximo de cada respuesta (en tokens)
+MAX_TOKENS = "8000"
+
+# La clave de Anthropic NO va aquí: se guarda como secreto con
+#   npx wrangler secret put ANTHROPIC_API_KEY
