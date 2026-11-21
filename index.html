@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Electroverse v13 · Laboratorio de electrónica</title>
+<title>Electroverse v14 · Laboratorio de electrónica</title>
 <meta name="description" content="Plataforma de electrónica: simulador de circuitos 2D y 3D, Arduino y ESP32 con IoT, lecciones, tutor y aulas.">
 <!-- v13: Three.js moderno (r160) para el visor 3D de la Biblioteca, copiado en libs/ (funciona sin internet).
      Es independiente del Three.js r128 que usan Esquemas y Protoboard (libs/three-r128).
@@ -347,6 +347,7 @@ pre.mermaid { background: var(--glass-2); border-radius: 12px; padding: 12px; ov
 @keyframes tin { from { opacity: 0; transform: translateY(8px); } }
 
 .empty { padding: 26px; text-align: center; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.empty > svg { width: 48px; height: 48px; flex: none; opacity: .8; }   /* v14: el ícono no crece en pantallas angostas */
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
@@ -1291,7 +1292,7 @@ onmessage = async (ev) => {
 <script src="js/realistas3d.js?v=13.0.6"></script>
 <script>
 /* Versión de la plataforma (se muestra en Inicio, Estructura y Ajustes) */
-const EV_VERSION = '13.0.0';
+const EV_VERSION = '14.0.0';
 /* ===== ELECTROVERSE · Motor de simulación mixta (análisis nodal modificado + lógica digital) ===== */
 (function (root) {
   'use strict';
@@ -9732,7 +9733,7 @@ PREGUNTA DEL ESTUDIANTE: ${q}`;
   renderChat() {
     const el = $('#chat'); if (!el) return;
     el.innerHTML = this.chat.length ? this.chat.map((m, i) => `<div class="bubble ${m.role === 'user' ? 'me' : m.role === 'sys' ? 'sys' : 'ai'}" data-i="${i}">${m.role === 'user' ? esc(m.content) : md(m.content)}${m.streaming && !m.content ? '<span class="muted typing">Pensando</span>' : m.streaming ? '<span class="typing"></span>' : ''}</div>`).join('')
-      : `<div class="empty">${ic('bot')}<p>Pregúntame por qué tu LED no enciende, qué hace tu código o pídeme un reto. Primero te doy un diagnóstico automático y luego la explicación de la IA.</p></div>`;
+      : `<div class="empty">${ic('bot')}<p>Pregúntame por qué tu LED no enciende, qué hace tu código o pídeme un reto. Primero te doy un diagnóstico automático y, si hay IA disponible, una explicación completa.</p></div>`;
     el.scrollTop = el.scrollHeight;
     this.dibujarMermaid(el);
     const stop = $('#t-stop'); if (stop) stop.hidden = !this.busy;
@@ -10137,7 +10138,7 @@ VIEWS.estructura = {
     return `<div class="view">
       <div class="view-head"><div><div class="eyebrow">Documento de proyecto · Electroverse v${EV_VERSION}</div><h1>Estructura de la plataforma</h1><p>Alcance, módulos, arquitectura, base de datos, hoja de ruta y los problemas críticos encontrados al probar esta fase.</p></div></div>
       <div class="grid g3">${[['VOLTIA', 'Corto, se pronuncia igual en español, inglés y quechua. Marca: rayo + onda en degradado cian-magenta.'], ['ILLA Lab', '“Illa” en quechua evoca luz y brillo. Une identidad andina con laboratorio. Ideal para zonas rurales.'], ['NODO Andino', 'El nodo es la base del análisis de circuitos y de una red de colegios conectados. Tono institucional.']].map(([n, d]) => `<section class="panel panel-b"><span class="lbl">Alternativa de nombre</span><h2>${n}</h2><p class="small muted">${d}</p></section>`).join('')}</div>
-      <section class="panel"><div class="panel-h"><h3>Acerca de esta versión</h3><span class="badge ok">v${EV_VERSION}</span></div><div class="panel-b"><p><b>Electroverse v13</b>: biblioteca de ${window.EV_DATA ? EV_DATA.componentes.length : 63} componentes con fichas y modelos 3D en alta resolución, protoboard 3D con modelos realistas, zoom y lectura de conexiones en Esquemas (exportar PNG/SVG e imprimir), botón «Nuevo» y tutor de electrónica por niveles (Básico, Intermedio, Avanzado e Industrial) con ejercicios y lectura de diagramas.</p><p class="small muted">Funciona sin internet: Three.js r128 y r160, Mermaid y las fuentes están en la carpeta <code>libs/</code>. Solo la IA del tutor necesita conexión. Cambios detallados en <code>CHANGELOG.md</code>.</p></div></section>
+      <section class="panel"><div class="panel-h"><h3>Acerca de esta versión</h3><span class="badge ok">v${EV_VERSION}</span></div><div class="panel-b"><p><b>Electroverse v14</b>: cuentas con Google o correo (Firebase), avance en la nube, aulas en línea con docentes aprobados por el administrador, biblioteca de ${window.EV_DATA ? EV_DATA.componentes.length : 63} componentes con modelos 3D en alta resolución, protoboard 3D realista, zoom y lectura de conexiones en Esquemas y tutor de electrónica por niveles (Básico, Intermedio, Avanzado e Industrial) con ejercicios y lectura de diagramas.</p><p class="small muted">Funciona sin internet: Three.js r128 y r160, Mermaid y las fuentes están en la carpeta <code>libs/</code>. Las cuentas y la IA del tutor necesitan conexión; sin internet se usan los perfiles de la computadora. Cambios detallados en <code>CHANGELOG.md</code>.</p></div></section>
       <section class="panel"><div class="panel-h"><h3>Mapa de módulos</h3></div><div class="table-wrap"><table class="t"><tr><th>Módulo</th><th>Contenido</th><th>Fase</th></tr>${mods.map(([m, c, f]) => `<tr><td><b>${m}</b></td><td>${c}</td><td><span class="badge ${ph[f][0]}">${ph[f][1]}</span></td></tr>`).join('')}</table></div></section>
       <div class="grid g2">
         <section class="panel"><div class="panel-h"><h3>Arquitectura</h3></div><div class="panel-b"><pre class="mermaid">flowchart TB

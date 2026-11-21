@@ -2,7 +2,9 @@
 
 Todos los cambios importantes de Electroverse. Las versiones siguen el formato `mayor.menor.parche`.
 
-## [Sin publicar] — v14 en desarrollo
+## [14.0.0] — 2026-11-21
+
+Cuentas en la nube, aulas en línea y servidor de IA para estudiantes (listo para activar).
 
 ### Nuevo
 - **Cuentas con Firebase** (opcional): entrar con Google o con correo y contraseña, avance guardado en la nube (`data/firebase-config.js`, `libs/firebase/`). Sin configuración, la app sigue igual que antes.
@@ -12,6 +14,13 @@ Todos los cambios importantes de Electroverse. Las versiones siguen el formato `
 - Ajustes muestra el UID de la cuenta y cierra la sesión de verdad en computadoras compartidas.
 - **Servidor de IA para estudiantes** (`servidor-ia/`, Cloudflare Workers): guarda la clave de Anthropic como secreto, solo responde a usuarios con sesión de Firebase y a la página de Electroverse, limita las preguntas por estudiante y por día (20 y 500 por defecto), usa Claude Haiku 5.5 y responde en vivo. Incluye 27 pruebas automáticas y guía (`docs/SERVIDOR_IA.md`).
 - El tutor usa el servidor de la plataforma cuando el estudiante entra con su cuenta, muestra cuántas preguntas le quedan y, al llegar al límite, responde sin IA.
+
+### Nota
+- El servidor de IA está incluido y probado, pero **no está activado** en esta publicación (`iaUrl` vacío): el tutor responde con su base propia hasta que se instale en Cloudflare con una clave de Anthropic (ver `docs/SERVIDOR_IA.md`).
+
+### Técnico
+- Firebase compat 11.10.0 en `libs/firebase/` (se carga solo si hay configuración).
+- Botones Nuevo con diálogo propio (`preguntar()`) también en la versión publicada.
 
 ## [13.0.0] — 2026-11-19
 

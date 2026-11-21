@@ -1,4 +1,4 @@
-# Electroverse v13 — Laboratorio de electrónica
+# Electroverse v14 — Laboratorio de electrónica
 
 Plataforma educativa para aprender, simular y programar electrónica en el navegador, pensada para estudiantes de secundaria técnica (EPT), institutos y universidades del Perú.
 
@@ -11,7 +11,8 @@ Plataforma educativa para aprender, simular y programar electrónica en el naveg
 - **Arduino y ESP32**: editor con errores en español, simulación, monitor serie, plotter e IoT con MQTT simulado.
 - **Biblioteca**: 63 componentes con modelo 3D, pinout, conexión y código de ejemplo.
 - **Tutor de electrónica**: módulos Básico, Intermedio, Avanzado e Industrial · IoT · Robótica, con ejercicios resueltos paso a paso y lectura de diagramas.
-- **Lecciones** y **aulas** para el docente.
+- **Cuentas y aulas en línea**: entra con Google o correo; el avance se guarda en la nube y el docente ve a sus estudiantes al instante.
+- **Lecciones** para aprender paso a paso.
 
 ## Cómo abrirla
 

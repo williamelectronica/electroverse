@@ -1,6 +1,6 @@
 # ELECTROVERSE — Prompt maestro
 
-> Descripción completa de la aplicación **tal como está en la v13** (etiqueta `v13.0.0`).
+> Descripción completa de la aplicación **tal como está en la v14** (etiqueta `v14.0.0`).
 > Sirve para reconstruir o continuar la app en el futuro. La descripción de la v12 está en el historial de Git (`v12.0.0`) y en `docs/AUDITORIA_V12.md`.
 
 ---
@@ -9,10 +9,10 @@
 
 | Campo | Valor |
 |---|---|
-| Nombre | **ELECTROVERSE** (pestaña: "Electroverse v13 · Laboratorio de electrónica") |
+| Nombre | **ELECTROVERSE** (pestaña: "Electroverse v14 · Laboratorio de electrónica") |
 | Subtítulo | Laboratorio de electrónica |
 | Autor | Prof. William Dextre — I.E. Industrial "Japón", Llata, Huánuco, Perú |
-| Versión | **13.0.0** (constante `EV_VERSION` en `index.html`; se muestra en Inicio, Estructura y Ajustes) |
+| Versión | **14.0.0** (constante `EV_VERSION` en `index.html`; se muestra en Inicio, Estructura y Ajustes) |
 | Público | Docentes y estudiantes de secundaria (13 a 17 años), institutos y universidades del Perú |
 | Idioma | Todo en español, con lenguaje sencillo y analogías cotidianas |
 | Objetivo | Aprender, simular y programar electrónica real sin componentes físicos: esquemas y protoboard (2D y 3D), Arduino y ESP32 con IoT, biblioteca de componentes con modelos 3D, lecciones, tutor de electrónica por niveles y aulas para el docente |
@@ -28,6 +28,9 @@
 | `js/visor3d.js` | `window.Visor3D`: visor 3D de la Biblioteca (Three.js r160) y fábrica de piezas compartida con la protoboard (`fabricaExterna`) |
 | `js/modelos3d.js` | Modelos 3D de cada componente (recetas por id y por categoría) |
 | `js/realistas3d.js` | `window.PB_REAL`: modelos realistas de piezas de protoboard (batería 9 V, portapilas, fuente, motor, display 7 segmentos, DIP switch, pulsador, interruptor, zumbador, capacitores, chips DIP) |
+| `data/firebase-config.js` | `window.EV_FIREBASE`: configuración de Firebase (`config`), `adminUid` del administrador e `iaUrl` del servidor de IA. Sin `config`, la app funciona sin cuentas |
+| `firestore.rules` | Reglas de seguridad de Firestore (perfil propio, aulas por docente, entregas, docentes, solicitudes) |
+| `servidor-ia/` | Servidor de IA del tutor (Cloudflare Worker): verifica el token de Firebase, límites diarios con Workers KV, SDK oficial de Anthropic, respuesta en vivo; `npm run prueba` (27 pruebas) |
 | `libs/` | Librerías copiadas para funcionar **sin internet** (ver abajo) |
 
 - **Simulador de circuitos propio** (análisis nodal modificado, MNA): DC y transitorio, modelos con datos de hojas de datos, lógica digital mixta y tabla de verdad automática.
@@ -40,6 +43,7 @@
 - **Esquemas y protoboard 2D**: SVG generado por código. Esquemas con zoom por `viewBox` (`EsqZoom`).
 - **Fuentes**: Atkinson Hyperlegible (texto), Chakra Petch (títulos), JetBrains Mono (código), copiadas en `libs/fonts/` (subconjunto latino, licencia SIL OFL).
 - **Diagramas**: Mermaid 11.4.1 en `libs/mermaid/`, dibujado con `dibujarMermaid(cont)` (sección Estructura y respuestas del tutor).
+- **Cuentas (v14)**: objeto `Fb` en `index.html`. Si hay configuración, carga Firebase compat 11.10.0 de `libs/firebase/`, recupera la sesión y pasa la cuenta a `Store` (`Store.me`, `Store.uid`, `Store.db` = Firestore, `Store.fb = true`). Entrar con Google (ventana emergente) o con correo y contraseña. `Store.isOwner` = UID igual a `adminUid`; `Store.canEdit` = documento `docentes/{uid}` existe.
 - **Guardado**: `localStorage` con prefijo `ev1:` por perfil. Dentro de Claude también usa las capacidades del artefacto (`window.claude`) para cuenta, nube, tutor IA y broker MQTT de la clase.
 - **IA del tutor**: dentro de Claude, `Store.sample`; fuera de Claude, SDK oficial `@anthropic-ai/sdk` 1.4.0 (jsDelivr, solo con internet) con la clave de API que pega el docente. El docente elige el modelo en "Configurar IA": `claude-haiku-5-5` (económico), `claude-sonnet-5-5` (equilibrado, predeterminado) o `claude-opus-5-5` (máxima calidad); Sonnet y Opus usan el respaldo del servidor (`fallbacks: "default"`).
 
@@ -97,8 +101,11 @@
 - **IA**: dentro de Claude o con clave de API (panel "Configurar IA", guardada solo en ese navegador). Sin IA responde con su base propia. Instrucciones del agente en `docs/AGENTE_TUTOR.md`.
 - Modo docente: sesión de aprendizaje (MINEDU), rúbrica y quiz (requieren IA).
 
-### 5.7 Aulas (`Codes`)
-- El docente crea aulas con código; los estudiantes generan un código **EV1** verificado con su avance.
+### 5.7 Aulas (`Aulas`, `Codes`)
+- El docente crea aulas con código de 6 caracteres; los estudiantes se unen con el código.
+- **Con cuentas (Firebase)**: el docente escucha solo `aulas` con `docente == uid` y `entregas` con `docentes` que lo incluyen; el estudiante escucha solo sus aulas y envía `entregas/{uid}` con la lista de docentes. El administrador ve todo.
+- **Docentes aprobados**: elegir "Docente" crea `solicitudes/{uid}`; el administrador aprueba en Ajustes → Docentes (`docentes/{uid}`) y el rol se activa solo al volver a entrar (`activarDocenteAprobado`).
+- **Sin cuenta**: el estudiante genera un código **EV1** verificado con su avance y el docente lo registra.
 
 ## 6. Inventario de componentes (v13)
 
@@ -128,7 +135,9 @@
 
 ## 8. Limitaciones conocidas
 
-- La IA del tutor necesita internet (y, fuera de Claude, una clave de API).
+- La IA del tutor necesita internet: dentro de Claude, con una clave de API del docente o con el servidor de IA (`iaUrl`, todavía sin activar en la v14.0.0).
+- Las cuentas necesitan internet; sin conexión se usan los perfiles de la computadora.
+- Las reglas de Firestore no se probaron con el emulador (no hay Java); se probaron con el proyecto real.
 - Al abrir con doble clic (`file://`), la Biblioteca usa Three.js r128 (se ve casi igual).
 - Los 27 módulos nuevos de la protoboard todavía no responden al programa.
 - El broker MQTT es simulado y el intérprete de Arduino no emula el chip ciclo a ciclo.

@@ -1,4 +1,4 @@
-# Checklist de pruebas — Electroverse v13
+# Checklist de pruebas — Electroverse v14
 
 Marca cada punto antes de publicar. **(A)** = lo comprobé automáticamente al cerrar la v13 · **(M)** = pruébalo tú a mano.
 
@@ -41,3 +41,15 @@ Marca cada punto antes de publicar. **(A)** = lo comprobé automáticamente al c
 ## Celular
 - [ ] (M) Navegación inferior, Biblioteca y Tutor legibles a 375 px de ancho.
 - [ ] (M) Protoboard 3D con pellizco y dos dedos.
+
+## Cuentas y aulas en línea (v14)
+- [x] (M) Entrar con Google y con correo en el proyecto real (lo probó el docente).
+- [x] (M) Docente crea un aula; estudiante (otra cuenta) se une y envía su avance; el docente lo ve al instante.
+- [x] (A) Con Firebase simulado: solicitud de docente → aprobación del administrador → rol activado solo al volver a entrar.
+- [x] (A) Sin configuración de Firebase la app funciona igual que la v13 y no carga Firebase.
+- [ ] (M) En la página publicada: entrar con Google (el dominio github.io está autorizado).
+
+## Servidor de IA (preparado, sin activar)
+- [x] (A) `npm run prueba` en `servidor-ia/`: 27 de 27 (token, orígenes, límites, errores, respuesta en vivo).
+- [x] (A) Tutor contra el servidor local simulado: respuesta en vivo, aviso de preguntas restantes y límite.
+- [ ] (M) Instalar en Cloudflare y hacer una pregunta real (docs/SERVIDOR_IA.md).
